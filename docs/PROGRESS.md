@@ -93,31 +93,81 @@
 
 ---
 
-## 3. File yang Dibuat / Diubah pada Sprint 4
+## 3. Sprint 5: Sales, Expenses, dan Inventory (Selesai)
 
-- `src/lib/services/orders-service.ts` (Baru)
-- `src/app/orders/actions.ts` (Baru)
-- `src/app/orders/page.tsx` (Baru)
-- `src/app/orders/order-list-client.tsx` (Baru)
-- `src/app/orders/new/page.tsx` (Baru)
-- `src/app/orders/[id]/page.tsx` (Baru)
-- `src/app/orders/[id]/order-detail-client.tsx` (Baru)
-- `src/lib/data/initial-data.ts` (Diperbarui dengan `INITIAL_CUSTOMERS` & `INITIAL_ORDERS`)
-- `src/lib/utils.ts` (Diperbarui dengan export `formatDateIndo`)
-- `src/app/page.tsx` (Diperbarui menghubungkan KPI dashboard ke data riil pesanan)
-- `scripts/import-excel-data.ts` (Diperbarui migrasi pelanggan & pesanan)
-- `supabase/seed.sql` (Diperbarui seed pelanggan & pesanan historis)
-- `tests/sprint4-orders.test.ts` (Baru — 14 tests)
+### Pencapaian Utama Sprint 5
+1. **Pencatatan Pembayaran Kas & Termin DP (`/orders/[id]/payments`)**:
+   - Skema pembayaran bertahap (DP dan Pelunasan) dengan metode Transfer Bank, Tunai, dan QRIS.
+   - Otomasi pembaruan `paid_amount` dan `payment_status` (`UNPAID` -> `PARTIALLY_PAID` -> `PAID`).
+   - Baseline pembayaran historis: Rp 290.000 (Wahyu Rp 160.000, Mama Rp 130.000).
+2. **Manajemen Piutang Usaha Terintegrasi (`/orders/receivables`)**:
+   - Tracking 7 pesanan belum lunas dengan total piutang berjalan tepat Rp 655.000.
+   - Analitik aging piutang (Lancar 0-14 hari, Perhatian 15-30 hari, Jatuh Tempo >30 hari).
+   - Fitur "Pelunasan Cepat" langsung dari tabel analitik piutang.
+3. **Pengurangan Stok Otomatis Berbasis BOM saat `IN_PRODUCTION`**:
+   - Otomatis mengurangi persediaan filamen (gram) dan komponen (LED, fitting, switch, box, bubble wrap).
+   - Pengembalian stok otomatis jika pesanan dibatalkan (`CANCELLED`).
+   - Mekanisme idempotensi mencegah pemotongan berganda.
+4. **Modul Beban Operasional Studio (`/expenses`)**:
+   - Pencatatan pengeluaran tetap (Sewa, Internet, Amortisasi) Rp 820.000 dan variabel Rp 55.000 (total baseline Rp 875.000).
+   - Klasifikasi kategori beban operasional, filter tipe beban, dan ringkasan bulanan.
+5. **Kartu Stok & Riwayat Mutasi (`/inventory`)**:
+   - Visualisasi log pergerakan stok real-time (IN/OUT/ADJUSTMENT/RETURN) dan audit trail.
+
+---
+
+## 4. Hasil Pengujian & Verifikasi Kualitas Sprint 5
+
+1. **Vitest Unit Test Suite**:
+   - `tests/financial-engine.test.ts`: **14 passed**
+   - `tests/foundation.test.ts`: **5 passed**
+   - `tests/sprint2-master-data.test.ts`: **6 passed**
+   - `tests/sprint4-orders.test.ts`: **15 passed**
+   - `tests/sprint5-sales-expenses-inventory.test.ts`: **10 passed**
+   - **Total Tests Passing**: **50 passed dari 50 tests (100%)**.
+2. **TypeScript Compilation (`tsc --noEmit`)**:
+   - Status: **0 errors**. Type safety ketat.
+3. **ESLint Static Analysis (`eslint`)**:
+   - Status: **0 errors, 0 warnings**.
+4. **Next.js Production Build (`npm run build`)**:
+   - Status: **Berhasil tanpa kompromi (12 route valid)**.
+   - Route terverifikasi: `/`, `/_not-found`, `/calculator`, `/capital`, `/expenses`, `/inventory`, `/orders`, `/orders/[id]`, `/orders/[id]/payments`, `/orders/new`, `/orders/receivables`, `/products`.
+5. **Live Dev Server Fetching**:
+   - `/orders/receivables`: **200 OK**
+   - `/expenses`: **200 OK**
+   - `/orders/ord-01/payments`: **200 OK**
+
+---
+
+## 5. File yang Dibuat / Diubah pada Sprint 5
+
+- `src/lib/services/payments-service.ts` (Baru)
+- `src/lib/services/expenses-service.ts` (Baru)
+- `src/app/expenses/actions.ts` (Baru)
+- `src/app/expenses/page.tsx` (Baru)
+- `src/app/expenses/expenses-client.tsx` (Baru)
+- `src/app/orders/receivables/page.tsx` (Baru)
+- `src/app/orders/receivables/receivables-client.tsx` (Baru)
+- `src/app/orders/[id]/payments/page.tsx` (Baru)
+- `src/app/orders/[id]/payments/payment-form-client.tsx` (Baru)
+- `src/lib/data/initial-data.ts` (Diperbarui dengan `INITIAL_PAYMENTS`, `INITIAL_EXPENSE_CATEGORIES`, `INITIAL_EXPENSES`, `INITIAL_STOCK_MOVEMENTS`)
+- `src/lib/services/materials-service.ts` (Diperbarui mutasi stok & kalkulasi BOM)
+- `src/lib/services/orders-service.ts` (Diperbarui trigger mutasi stok otomatis)
+- `src/app/orders/actions.ts` (Diperbarui server action payment)
+- `src/app/orders/[id]/order-detail-client.tsx` (Diperbarui tautan pencatatan termin/DP)
+- `src/app/inventory/page.tsx` (Diperbarui kartu stok & log mutasi)
+- `src/components/layout/sidebar.tsx` (Diperbarui menu navigasi Piutang Usaha)
+- `tests/sprint5-sales-expenses-inventory.test.ts` (Baru — 10 unit tests)
 - `docs/PROGRESS.md` (Diperbarui)
 - `docs/IMPLEMENTATION_PLAN.md` (Diperbarui)
 
 ---
 
-## 4. Langkah Berikutnya (Next Actions)
+## 6. Langkah Berikutnya (Next Actions)
 
-- **Sprint 5: Sales, Expenses, dan Inventory**:
-  - Modul Pembayaran Kas (`/orders/[id]/payments`): Pencatatan pelunasan parsial (DP) atau lunas penuh.
-  - Halaman Manajemen Piutang (`/orders/receivables`): Tracking khusus saldo piutang 7 pesanan belum lunas senilai Rp 655.000.
-  - Mutasi Stok Filamen & Komponen Otomatis: Pengurangan stok bahan baku saat pesanan beralih ke status `IN_PRODUCTION`.
-  - Modul Pengeluaran Operasional (`/expenses`): Pencatatan biaya operasional tetap dan variabel (iklan, internet, sewa, maintenance).
+- **Sprint 6: Reporting dan Analytics**:
+  - Halaman Laporan Laba Rugi (`/reports/profit-loss`): Breakdown Pendapatan kotor, HPP riil, Beban Operasional, Laba Bersih.
+  - Laporan Arus Kas (`/reports/cash-flow`): Kas Masuk Pelanggan vs Kas Keluar (Bahan Baku & Beban Operasional) vs Saldo Kas Bersih.
+  - Analitik Produk & Penjualan (`/reports/sales-analytics`): Margin kontribusi per SKU produk, utilisasi printer 3D, tren pesanan bulanan.
+  - Fitur Export Rekap ke Excel/CSV untuk audit pembukuan studio.
 

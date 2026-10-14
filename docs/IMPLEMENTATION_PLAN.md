@@ -114,7 +114,8 @@ Dokumen ini adalah rencana kerja bertahap berbasis Sprint dari Sprint 0 hingga S
 
 ---
 
-### Sprint 5 — Sales, Expenses, dan Inventory
+### Sprint 5 — Sales, Expenses, dan Inventory (COMPLETED)
+- **Status**: **COMPLETED (Selesai & Terverifikasi 100%)**
 - **Sprint Goal**: Menghubungkan pesanan dengan pencatatan pembayaran kas, tracking piutang, mutasi stok filamen otomatis, dan pencatatan biaya operasional rutin.
 - **User Stories**:
   - Sebagai Pemilik Usaha, saya dapat mencatat pembayaran pelunasan pesanan dan langsung melihat saldo piutang berkurang.
@@ -122,14 +123,15 @@ Dokumen ini adalah rencana kerja bertahap berbasis Sprint dari Sprint 0 hingga S
   - Sebagai Pemilik Usaha, saya dapat mencatat pengeluaran operasional (iklan, internet, sewa).
 - **Technical Tasks**:
   - Modul Pembayaran (`/orders/[id]/payments`): Input pembayaran parsial (DP) atau lunas, pilihan metode transfer/cash.
-  - Halaman Manajemen Piutang (`/orders/receivables`): Daftar pesanan yang belum lunas.
-  - Database Trigger / Server Action mutasi stok: Pengurangan otomatis stok bahan saat pesanan berstatus `IN_PRODUCTION`.
-  - Modul Pengeluaran (`/expenses`): Pencatatan biaya operasional tetap dan variabel.
+  - Halaman Manajemen Piutang (`/orders/receivables`): Daftar pesanan yang belum lunas dengan aging analysis & aksi pelunasan cepat.
+  - Server Action mutasi stok: Pengurangan otomatis stok bahan saat pesanan berstatus `IN_PRODUCTION`, serta pengembalian stok saat `CANCELLED`.
+  - Modul Pengeluaran (`/expenses`): Pencatatan biaya operasional tetap (Rp 820.000) dan variabel (Rp 55.000).
+  - Kartu Stok & Riwayat Mutasi (`/inventory`): Visualisasi pergerakan log stok bahan baku.
 - **Acceptance Criteria**:
   - Piutang awal Rp655.000 terpetakan dengan jelas pada 7 pesanan belum lunas.
   - Stok berkurang secara konsisten dan mutasi tercatat di `stock_movements`.
-  - Tidak ada pencatatan ganda pada transaksi pembayaran.
-- **Test Strategy**: Pengujian mutasi stok saat perubahan status dan uji pembatalan pesanan.
+  - Tidak ada pencatatan ganda pada transaksi pembayaran maupun pemotongan stok (idempotent).
+- **Test Strategy**: Pengujian mutasi stok saat perubahan status, uji pembatalan pesanan, dan integrasi pembayaran (`tests/sprint5-sales-expenses-inventory.test.ts` - 10 tests passed).
 
 ---
 

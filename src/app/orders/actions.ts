@@ -50,3 +50,27 @@ export async function updateOrderPaymentAction(
     return { success: false, error: message };
   }
 }
+
+export async function createPaymentAction(payload: {
+  order_id: string;
+  amount: number;
+  payment_method: import("@/types/database").PaymentMethod;
+  reference_number?: string;
+  proof_url?: string;
+  notes?: string;
+}) {
+  try {
+    const { createPayment } = await import("@/lib/services/payments-service");
+    const payment = await createPayment(payload);
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${payload.order_id}`);
+    revalidatePath(`/orders/${payload.order_id}/payments`);
+    revalidatePath("/orders/receivables");
+    revalidatePath("/");
+    return { success: true, payment };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Gagal mencatat pembayaran";
+    return { success: false, error: message };
+  }
+}
+

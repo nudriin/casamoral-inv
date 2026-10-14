@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Box,
   ShoppingCart,
+  CreditCard,
   Boxes,
   Coins,
   Receipt,
@@ -32,6 +33,12 @@ const navigationItems = [
     href: "/orders",
     icon: ShoppingCart,
     badge: "9 Transaksi",
+  },
+  {
+    name: "Piutang Usaha",
+    href: "/orders/receivables",
+    icon: CreditCard,
+    badge: "Rp 655k",
   },
   {
     name: "Bahan & Stok",

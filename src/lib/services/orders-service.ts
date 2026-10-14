@@ -337,6 +337,15 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
   order.status = newStatus;
   order.updated_at = new Date().toISOString();
 
+  // Automatic inventory mutation triggers
+  if (newStatus === "IN_PRODUCTION") {
+    const { deductBOMStockForOrder } = await import("./materials-service");
+    await deductBOMStockForOrder(order);
+  } else if (newStatus === "CANCELLED") {
+    const { restoreBOMStockForOrder } = await import("./materials-service");
+    await restoreBOMStockForOrder(order);
+  }
+
   const { isConfigured } = getEnvStatus();
   if (isConfigured) {
     try {

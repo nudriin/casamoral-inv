@@ -1,4 +1,4 @@
-import { Product, Material, Asset, Customer, Order } from "@/types/database";
+import { Product, Material, Asset, Customer, Order, Payment, Expense, ExpenseCategory, StockMovement } from "@/types/database";
 
 /**
  * Validated Master Data extracted directly from:
@@ -758,3 +758,201 @@ export const INITIAL_ORDERS: Order[] = [
     ],
   },
 ];
+
+// Initial Verified Payments (Realisasi Kas Masuk Rp 290.000: Wahyu Rp 160k + Mama Rp 130k)
+export const INITIAL_PAYMENTS: Payment[] = [
+  {
+    id: "pay-01",
+    order_id: "ord-08",
+    payment_date: "2026-08-12T16:00:00Z",
+    amount: 160000,
+    payment_method: "TRANSFER",
+    reference_number: "TF-BCA-88912",
+    notes: "Pelunasan penuh transfer bank lampu Ollie + add-on kustom Lee Jeno",
+    created_at: "2026-08-12T16:00:00Z",
+  },
+  {
+    id: "pay-02",
+    order_id: "ord-09",
+    payment_date: "2026-08-13T10:30:00Z",
+    amount: 130000,
+    payment_method: "CASH",
+    reference_number: "CASH-2026-001",
+    notes: "Pelunasan tunai pesanan lampu Ollie Mama",
+    created_at: "2026-08-13T10:30:00Z",
+  },
+];
+
+// Operational Expense Categories (Template ELS Studio & Database Seed)
+export const INITIAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  {
+    id: "exp-cat-01",
+    name: "Iklan & Pemasaran (Ads)",
+    is_fixed_cost: true,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "exp-cat-02",
+    name: "Listrik & Utilitas Non-Produksi",
+    is_fixed_cost: true,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "exp-cat-03",
+    name: "Internet, Wifi & Software",
+    is_fixed_cost: true,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "exp-cat-04",
+    name: "Maintenance & Sparepart Mesin",
+    is_fixed_cost: true,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "exp-cat-05",
+    name: "Operasional & Perlengkapan Lainnya",
+    is_fixed_cost: false,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+];
+
+// Initial Operational Expenses
+export const INITIAL_EXPENSES: Expense[] = [
+  {
+    id: "exp-01",
+    expense_date: "2026-08-02",
+    category_id: "exp-cat-03",
+    description: "Langganan Internet Studio Indihome & Cloud",
+    amount: 250000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Biaya koneksi operasional dan transfer slicing file",
+    created_at: "2026-08-02T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[2],
+  },
+  {
+    id: "exp-02",
+    expense_date: "2026-08-03",
+    category_id: "exp-cat-02",
+    description: "Token Listrik Ruang Studio Non-Produksi",
+    amount: 150000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Penerangan studio, laptop, dan kipas ventilasi",
+    created_at: "2026-08-03T11:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[1],
+  },
+  {
+    id: "exp-03",
+    expense_date: "2026-08-04",
+    category_id: "exp-cat-01",
+    description: "Meta Ads & Promosi Instagram Peluncuran Studio",
+    amount: 300000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Target audiens Kalimantan Tengah & sekitarnya",
+    created_at: "2026-08-04T14:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-04",
+    expense_date: "2026-08-05",
+    category_id: "exp-cat-04",
+    description: "Pelumas Nozzle & Isopropyl Alcohol (IPA) Pembersih Bed",
+    amount: 120000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Perawatan berkala mesin Bambulab dan Anycubic",
+    created_at: "2026-08-05T09:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[3],
+  },
+  {
+    id: "exp-05",
+    expense_date: "2026-08-06",
+    category_id: "exp-cat-05",
+    description: "Lakban Fragile & Spidol Penanda Packing Pengiriman",
+    amount: 55000,
+    payment_method: "CASH",
+    is_capital_expenditure: false,
+    notes: "Perlengkapan packing paket kurir",
+    created_at: "2026-08-06T15:30:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[4],
+  },
+];
+
+// Initial Stock Movements (Pengadaan Awal Modal Bahan Baku)
+export const INITIAL_STOCK_MOVEMENTS: StockMovement[] = [
+  {
+    id: "mov-01",
+    material_id: "mat-01",
+    movement_type: "PURCHASE",
+    quantity: 10000, // +10.000 gram
+    reference_id: "cap-03",
+    notes: "Saldo awal pengadaan 10 roll filamen PLA/PETG campuran",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+  {
+    id: "mov-02",
+    material_id: "mat-02",
+    movement_type: "PURCHASE",
+    quantity: 10,
+    reference_id: "cap-23",
+    notes: "Saldo awal pengadaan 10 pcs bohlam Inlite 3W",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+  {
+    id: "mov-03",
+    material_id: "mat-03",
+    movement_type: "PURCHASE",
+    quantity: 20,
+    reference_id: "cap-07",
+    notes: "Saldo awal pengadaan 20 pcs fitting lampu E27",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+  {
+    id: "mov-04",
+    material_id: "mat-04",
+    movement_type: "PURCHASE",
+    quantity: 20,
+    reference_id: "cap-08",
+    notes: "Saldo awal pengadaan 20 pcs kabel sakelar on/off",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+  {
+    id: "mov-05",
+    material_id: "mat-05",
+    movement_type: "PURCHASE",
+    quantity: 30,
+    reference_id: "cap-14",
+    notes: "Saldo awal pengadaan 30 pcs karet pelindung kabel",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+  {
+    id: "mov-06",
+    material_id: "mat-06",
+    movement_type: "PURCHASE",
+    quantity: 20,
+    reference_id: "cap-16",
+    notes: "Saldo awal pengadaan 20 pcs kardus kemasan 20x20x20",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+  {
+    id: "mov-07",
+    material_id: "mat-07",
+    movement_type: "PURCHASE",
+    quantity: 50,
+    reference_id: "cap-17",
+    notes: "Saldo awal pengadaan 50 meter bubble wrap roll",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+  {
+    id: "mov-08",
+    material_id: "mat-08",
+    movement_type: "PURCHASE",
+    quantity: 100,
+    notes: "Saldo awal pengadaan 100 pcs stiker label branding Casa Moral",
+    created_at: "2026-08-01T08:00:00Z",
+  },
+];
+

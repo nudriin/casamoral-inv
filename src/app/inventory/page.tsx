@@ -1,14 +1,17 @@
-import { getMaterials, getMaterialsSummary } from "@/lib/services/materials-service";
+import { getMaterials, getMaterialsSummary, getStockMovements } from "@/lib/services/materials-service";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatRupiah, formatNumber } from "@/lib/utils";
+import { formatRupiah, formatNumber, formatDateIndo } from "@/lib/utils";
 import { Plus, ArrowUpDown } from "lucide-react";
 
 export default async function InventoryPage() {
-  const materials = await getMaterials();
-  const summary = await getMaterialsSummary();
+  const [materials, summary, movements] = await Promise.all([
+    getMaterials(),
+    getMaterialsSummary(),
+    getStockMovements(),
+  ]);
 
   return (
     <DashboardShell
@@ -142,7 +145,102 @@ export default async function InventoryPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Stock Movements Audit Trail Card */}
+        <Card>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100 dark:border-zinc-800">
+            <div>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <ArrowUpDown className="w-4 h-4 text-amber-500" />
+                Kartu Stok & Riwayat Mutasi Bahan Baku
+              </CardTitle>
+              <CardDescription>
+                Audit log real-time mutasi persediaan: pengadaan awal modal, pemotongan otomatis produksi, dan pengembalian
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {movements.length} Catatan Mutasi
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
+                  <tr>
+                    <th className="py-3 px-4 font-semibold">Waktu Mutasi</th>
+                    <th className="py-3 px-4 font-semibold">Tipe Mutasi</th>
+                    <th className="py-3 px-4 font-semibold">Bahan / Komponen</th>
+                    <th className="py-3 px-4 font-semibold text-right">Volume Mutasi</th>
+                    <th className="py-3 px-4 font-semibold">Keterangan / Referensi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+                  {movements.map((mov) => {
+                    const isPositive = mov.quantity > 0;
+                    const mat = materials.find((m) => m.id === mov.material_id);
+
+                    return (
+                      <tr
+                        key={mov.id}
+                        className="hover:bg-zinc-50/60 dark:hover:bg-zinc-900/30 transition-colors"
+                      >
+                        <td className="py-3 px-4 font-mono text-zinc-500">
+                          {formatDateIndo(mov.created_at)}
+                        </td>
+
+                        <td className="py-3 px-4">
+                          {mov.movement_type === "PRODUCTION_USAGE" && (
+                            <Badge variant="warning" className="text-[10px]">
+                              Pemakaian Produksi
+                            </Badge>
+                          )}
+                          {mov.movement_type === "PURCHASE" && (
+                            <Badge variant="success" className="text-[10px]">
+                              Pengadaan / Pembelian
+                            </Badge>
+                          )}
+                          {mov.movement_type === "RETURN" && (
+                            <Badge variant="secondary" className="text-[10px] bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-400">
+                              Pengembalian (Batal)
+                            </Badge>
+                          )}
+                          {mov.movement_type === "WASTE_ADJUSTMENT" && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              Penyusutan / Gagal
+                            </Badge>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                          {mat?.name || mov.material_id}
+                        </td>
+
+                        <td className="py-3 px-4 text-right font-mono font-bold">
+                          <span
+                            className={
+                              isPositive
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-rose-600 dark:text-rose-400"
+                            }
+                          >
+                            {isPositive ? `+${formatNumber(mov.quantity)}` : formatNumber(mov.quantity)}{" "}
+                            {mat?.unit}
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400 italic">
+                          {mov.notes || "-"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardShell>
   );
 }
+

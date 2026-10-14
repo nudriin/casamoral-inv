@@ -504,24 +504,35 @@ export function OrderDetailClient({ initialOrder }: OrderDetailClientProps) {
               </div>
 
               {/* Payment Action Buttons */}
-              {order.payment_status !== "PAID" && (
-                <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+              <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                <Link href={`/orders/${order.id}/payments`} className="block">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs gap-1 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                  >
+                    <CreditCard className="w-3.5 h-3.5" /> Catat Kas / DP / Riwayat Bayar
+                  </Button>
+                </Link>
+
+                {order.payment_status !== "PAID" && (
                   <Button
                     onClick={() => handlePaymentUpdate("PAID", order.total_amount)}
                     disabled={loading}
                     size="sm"
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Pelunasan (Tandai Lunas)
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Konfirmasi Pelunasan Cepat
                   </Button>
-                </div>
-              )}
+                )}
 
-              {order.payment_status === "PAID" && (
-                <div className="pt-2 text-center text-emerald-600 font-medium">
-                  ✓ Pembayaran telah lunas secara penuh.
-                </div>
-              )}
+                {order.payment_status === "PAID" && (
+                  <div className="pt-1 text-center text-emerald-600 font-medium">
+                    ✓ Pembayaran telah lunas secara penuh.
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
