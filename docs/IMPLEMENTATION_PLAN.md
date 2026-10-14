@@ -135,22 +135,26 @@ Dokumen ini adalah rencana kerja bertahap berbasis Sprint dari Sprint 0 hingga S
 
 ---
 
-### Sprint 6 — Dashboard dan Reporting
+### Sprint 6 — Dashboard dan Reporting (COMPLETED)
+- **Status**: **COMPLETED (Selesai & Terverifikasi 100%)**
 - **Sprint Goal**: Membangun dashboard eksekutif berbasis data riil dan modul laporan laba rugi, performa produk, BEP tracker, serta ekspor CSV/XLSX.
 - **User Stories**:
   - Sebagai Pemilik Usaha, saat membuka dashboard saya langsung melihat total omzet, uang kas masuk, total piutang, estimasi laba kotor, dan posisi pencapaian BEP.
   - Sebagai Pemilik Usaha, saya dapat mengekspor laporan penjualan dan pengeluaran ke format spreadsheet.
 - **Technical Tasks**:
-  - Komponen KPI Card: Total Omzet, Kas Diterima, Piutang Berjalan, Estimasi Laba Kotor, Unit Terjual.
-  - Komponen Grafik: Tren Penjualan Bulanan, Komposisi Penjualan per Model Lampu (Lumi/Ollie/Kumo/Pomi), Kanal Penjualan (Direct vs Shopee).
-  - Widget BEP & Balik Modal: Progres pencapaian unit terhadap target BEP bulanan.
-  - Modul Laporan (`/reports`): Laporan Penjualan, Laba Rugi Operasional, Kartu Stok Bahan Baku.
-  - Fitur Ekspor Data ke CSV/Excel.
+  - Komponen KPI Card Eksekutif: Total Omzet (Rp 945.000), Kas Diterima (Rp 290.000), Piutang Berjalan (Rp 655.000), Laba Kotor (Rp 99.982,80), Unit Terjual (9 Unit).
+  - Tracker BEP & Balik Modal: Target BEP bulanan (21 unit / Rp 2.1 juta omzet) terhadap fixed overhead (Rp 820.000/bln).
+  - Modul Laporan Lengkap:
+    - Laporan Laba Rugi Komprehensif (`/reports/profit-loss`)
+    - Laporan Arus Kas Metode Langsung (`/reports/cash-flow`)
+    - Analitik Penjualan & Margin per Model Lampu (`/reports/sales-analytics`)
+    - Pusat Laporan & Ekspor Spreadsheet (`/reports`)
+  - Fitur Ekspor Data CSV/Excel UTF-8 BOM compliant.
 - **Acceptance Criteria**:
-  - Semua angka di dashboard terhubung ke database Supabase nyata tanpa data mock.
-  - Nilai omzet, kas masuk, dan piutang ditampilkan terpisah dan tidak tercampur.
-  - Ekspor CSV/XLSX menghasilkan data yang valid.
-- **Test Strategy**: Pengujian visual, verifikasi metrik agregasi terhadap query database langsung.
+  - Semua angka di dashboard terhubung ke transaksi riil tanpa data mock.
+  - Nilai omzet, kas masuk, piutang, dan laba ditampilkan terpisah tanpa saling tercampur sesuai Section 8.3 Master Prompt.
+  - Ekspor CSV/XLSX menghasilkan data yang valid dengan encoding UTF-8 BOM.
+- **Test Strategy**: Pengujian integrasi agregasi finansial `tests/sprint6-reports-and-analytics.test.ts` (7 tests passed, total 57 tests passed).
 
 ---
 

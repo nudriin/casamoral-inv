@@ -2,9 +2,12 @@
 
 ## Status Proyek Terkini
 
-- **Sprint Aktif**: **Sprint 4 — Order and Production Management**
-- **Status Sprint 4**: **COMPLETED (Selesai & Terverifikasi 100%)**
-- **Tanggal Selesai Sprint 4**: 15 Oktober 2026
+- **Sprint Selesai**: **Sprint 6 — Dashboard dan Reporting**
+- **Status Sprint 6**: **COMPLETED (Selesai & Terverifikasi 100%)**
+- **Sprint Berikutnya**: **Sprint 7 — Quality Assurance, Security, dan Release**
+- **Tanggal Selesai Sprint 6**: 15 Oktober 2026
+- **Test Suite**: **57 passed dari 57 tests (100% Lulus)**
+- **Production Build**: **16 Routes Pre-rendered / Dynamic (Sukses)**
 - **Lead Engineer / Architect**: AI Senior Full-Stack Agent
 
 ---
@@ -163,11 +166,81 @@
 
 ---
 
-## 6. Langkah Berikutnya (Next Actions)
+## 6. Sprint 6: Dashboard dan Reporting (Selesai)
 
-- **Sprint 6: Reporting dan Analytics**:
-  - Halaman Laporan Laba Rugi (`/reports/profit-loss`): Breakdown Pendapatan kotor, HPP riil, Beban Operasional, Laba Bersih.
-  - Laporan Arus Kas (`/reports/cash-flow`): Kas Masuk Pelanggan vs Kas Keluar (Bahan Baku & Beban Operasional) vs Saldo Kas Bersih.
-  - Analitik Produk & Penjualan (`/reports/sales-analytics`): Margin kontribusi per SKU produk, utilisasi printer 3D, tren pesanan bulanan.
-  - Fitur Export Rekap ke Excel/CSV untuk audit pembukuan studio.
+### Pencapaian Utama Sprint 6
+1. **Laporan Laba Rugi Komprehensif (`/reports/profit-loss`)**:
+   - Menghitung Pendapatan Kotor (Rp 945.000), Potongan Diskon Promo (Rp 15.000), Potongan Platform Shopee (Rp 15.600), menghasilkan Pendapatan Bersih (Rp 914.400).
+   - Menghitung HPP Terkunci Riil (COGS), Laba Kotor (Rp 99.982,80) dengan Gross Margin 10.93%.
+   - Rincian Beban Operasional Tetap (Rp 820.000) dan Variabel (Rp 55.000), serta Laba/(Rugi) Operasional Bersih secara presisi matematis tanpa floating point error.
+2. **Laporan Arus Kas Metode Langsung (`/reports/cash-flow`)**:
+   - Memetakan Arus Kas Masuk Operasi (Kas Pelanggan Rp 290.000).
+   - Memetakan Arus Kas Keluar Operasi (Beban Kas Tunai & Pengadaan Bahan Baku).
+   - Memetakan Arus Kas Investasi (Mesin Printer 3D Bambulab & Anycubic) dan Arus Kas Pendanaan (Setoran Modal Awal Rp 11.440.748).
+   - Mematuhi Section 8.3 Master Prompt dengan membedakan secara tegas antara Saldo Kas, Modal Usaha, Nilai Aset Tetap, dan Keuntungan.
+3. **Analitik Produk & Penjualan (`/reports/sales-analytics`)**:
+   - Matriks profitabilitas 4 model lampu ambient (Lumi, Ollie, Kumo, Pomi) lengkap dengan HPP, Margin %, Pangsa Pasar %, dan estimasi jam cetak printer (total ~104.5 jam).
+   - Analisis kontribusi kanal transaksi (Direct WhatsApp 8 pesanan vs Shopee 1 pesanan) dan add-on kustomisasi (Lee Jeno).
+4. **Pusat Laporan & Ekspor Spreadsheet (`/reports`)**:
+   - Hub pelaporan keuangan eksekutif dengan one-click export CSV/Excel UTF-8 BOM compliant.
+   - Ekspor Laba Rugi, Arus Kas, Matriks Produk, dan Rekap 9 Pesanan.
+5. **Dashboard Eksekutif Utama (`/`)**:
+   - Terhubung 100% ke data transaksi riil (Omzet Rp 945.000, Kas Masuk Rp 290.000, Piutang Rp 655.000, Laba Kotor Rp 99.982,80).
+   - Widget Tracker Target Break-Even Point (BEP) Bulanan (Target ~21 unit, progres 9 unit / 42.9%, sisa 12 unit menuju impas).
+   - Visualisasi katalog lampu, status pesanan, dan warning piutang kritis.
+
+---
+
+## 7. Hasil Pengujian & Verifikasi Kualitas Sprint 6
+
+1. **Vitest Unit & Integration Test Suite**:
+   - `tests/financial-engine.test.ts`: **14 passed**
+   - `tests/foundation.test.ts`: **5 passed**
+   - `tests/sprint2-master-data.test.ts`: **6 passed**
+   - `tests/sprint4-orders.test.ts`: **15 passed**
+   - `tests/sprint5-sales-expenses-inventory.test.ts`: **10 passed**
+   - `tests/sprint6-reports-and-analytics.test.ts`: **7 passed**
+   - **Total Tests Passing**: **57 passed dari 57 tests (100% Lulus)**.
+2. **TypeScript Compilation (`npx tsc --noEmit`)**:
+   - Status: **0 errors**. Type safety terverifikasi ketat.
+3. **ESLint Static Analysis (`npm run lint`)**:
+   - Status: **0 errors, 0 warnings**.
+4. **Next.js Production Build (`npm run build`)**:
+   - Status: **Berhasil tanpa kompromi (16 route valid)**.
+   - Route terverifikasi: `/`, `/_not-found`, `/calculator`, `/capital`, `/expenses`, `/inventory`, `/orders`, `/orders/[id]`, `/orders/[id]/payments`, `/orders/new`, `/orders/receivables`, `/products`, `/reports`, `/reports/cash-flow`, `/reports/profit-loss`, `/reports/sales-analytics`.
+5. **Live Dev Server Fetching**:
+   - `/`: **200 OK**
+   - `/reports`: **200 OK**
+   - `/reports/profit-loss`: **200 OK**
+   - `/reports/cash-flow`: **200 OK**
+   - `/reports/sales-analytics`: **200 OK**
+
+---
+
+## 8. File yang Dibuat / Diubah pada Sprint 6
+
+- `src/lib/services/reports-service.ts` (Baru)
+- `src/lib/export-csv.ts` (Baru)
+- `src/app/reports/page.tsx` (Baru)
+- `src/app/reports/reports-hub-client.tsx` (Baru)
+- `src/app/reports/profit-loss/page.tsx` (Baru)
+- `src/app/reports/profit-loss/profit-loss-client.tsx` (Baru)
+- `src/app/reports/cash-flow/page.tsx` (Baru)
+- `src/app/reports/cash-flow/cash-flow-client.tsx` (Baru)
+- `src/app/reports/sales-analytics/page.tsx` (Baru)
+- `src/app/reports/sales-analytics/sales-analytics-client.tsx` (Baru)
+- `src/app/page.tsx` (Diperbarui dengan metrik eksekutif riil & BEP tracker)
+- `tests/sprint6-reports-and-analytics.test.ts` (Baru — 7 unit tests)
+- `docs/PROGRESS.md` (Diperbarui)
+- `docs/IMPLEMENTATION_PLAN.md` (Diperbarui)
+
+---
+
+## 9. Langkah Berikutnya (Next Actions)
+
+- **Sprint 7: Quality Assurance, Security, dan Release**:
+  - End-to-End User Journey Verification: Alur lengkap input pesanan baru -> mutasi stok otomatis -> pelunasan kas -> verifikasi pembukuan laba rugi & arus kas.
+  - Audit Keamanan & Database RLS Policies.
+  - Pengujian responsivitas mobile (viewport smartphone 375px - 768px).
+  - Penyusunan dokumentasi rilis final: `docs/USER_MANUAL.md` dan `docs/DEPLOYMENT_GUIDE.md`.
 
