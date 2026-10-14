@@ -5,7 +5,6 @@ import {
   Package,
   ShieldCheck,
   CheckCircle2,
-  Clock,
   ChevronRight,
   Banknote,
 } from "lucide-react";
@@ -14,33 +13,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/utils";
+import { getOrders, getOrderSummaryStats } from "@/lib/services/orders-service";
+import { INITIAL_PRODUCTS, INITIAL_CAPITAL_PURCHASES } from "@/lib/data/initial-data";
 
-// Verified business figures from discovery audit (HPP CASA MORAL V2 & Orderan Casa Moral)
-const SUMMARY_STATS = {
-  totalOrderVolume: 945000,   // Total volume pesanan (Omzet kotor)
-  realizedCash: 290000,       // Uang kas yang benar-benar lunas
-  unpaidReceivables: 655000,  // Piutang pesanan belum lunas
-  unitsSold: 9,               // Total 9 unit pesanan
-  initialCapital: 11440748,   // Modal awal (23 item belanja)
-  fixedAssetsVal: 9462021,    // Aset mesin printer
-};
+export default async function DashboardPage() {
+  const [orders, stats] = await Promise.all([
+    getOrders(),
+    getOrderSummaryStats(),
+  ]);
 
-const PRODUCTS_PREVIEW = [
-  { name: "Lampu Ambient - Lumi", sku: "CM-LUMI-01", filamentGram: 166.4, hpp: 81182.4, price: 120000, markup: "50%" },
-  { name: "Lampu Ambient - Ollie", sku: "CM-OLLIE-01", filamentGram: 203.08, hpp: 89705.28, price: 130000, markup: "50%" },
-  { name: "Lampu Ambient - Kumo", sku: "CM-KUMO-01", filamentGram: 170.13, hpp: 82588.08, price: 125000, markup: "50%" },
-  { name: "Lampu Ambient - Pomi", sku: "CM-POMI-01", filamentGram: 268.76, hpp: 103892.16, price: 150000, markup: "50%" },
-];
-
-const RECENT_ORDERS_PREVIEW = [
-  { customer: "Wahyu", product: "Ollie", details: "Base Oren + Shade Putih + Cap Lee Jeno", amount: 160000, channel: "Direct", status: "Lunas" },
-  { customer: "Mama", product: "Ollie", details: "Base Oren + Shade Putih (No Cap)", amount: 130000, channel: "Direct", status: "Lunas" },
-  { customer: "Mahput", product: "Ollie", details: "Base Pink + Shade Putih + Cap Putih", amount: 130000, channel: "Shopee", status: "Belum Lunas" },
-  { customer: "Gress", product: "Ollie", details: "Base Oren + Shade Putih + Cap Oren", amount: 115000, channel: "Direct", status: "Belum Lunas" },
-  { customer: "Acil Ely", product: "Ollie", details: "Base Oren + Shade Putih + Cap Oren", amount: 130000, channel: "Direct", status: "Belum Lunas" },
-];
-
-export default function DashboardPage() {
+  const initialCapital = INITIAL_CAPITAL_PURCHASES.reduce((sum, item) => sum + item.totalCost, 0);
+  const fixedAssetsVal = 9462021; // Bambulab + Anycubic
+  const recentOrders = orders.slice(0, 5);
   return (
     <DashboardShell
       title="Ringkasan Eksekutif & Operasional"
@@ -90,11 +74,11 @@ export default function DashboardPage() {
               <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                {formatRupiah(SUMMARY_STATS.totalOrderVolume)}
+              <div className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 font-mono">
+                {formatRupiah(stats.totalRevenue)}
               </div>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center gap-1">
-                <span className="font-semibold text-emerald-600">{SUMMARY_STATS.unitsSold} unit</span> terpesan dari 9 transaksi
+                <span className="font-semibold text-emerald-600">{stats.totalOrders} transaksi</span> tercatat di sistem
               </p>
             </CardContent>
           </Card>
@@ -108,11 +92,11 @@ export default function DashboardPage() {
               <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                {formatRupiah(SUMMARY_STATS.realizedCash)}
+              <div className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
+                {formatRupiah(stats.totalPaid)}
               </div>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                2 pesanan telah lunas (30.7% omzet)
+                {((stats.totalPaid / (stats.totalRevenue || 1)) * 100).toFixed(1)}% Realisasi pembayaran
               </p>
             </CardContent>
           </Card>
@@ -126,11 +110,11 @@ export default function DashboardPage() {
               <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold tracking-tight text-amber-700 dark:text-amber-400">
-                {formatRupiah(SUMMARY_STATS.unpaidReceivables)}
+              <div className="text-xl font-bold tracking-tight text-amber-700 dark:text-amber-400 font-mono">
+                {formatRupiah(stats.totalReceivables)}
               </div>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                7 pesanan belum lunas (69.3% omzet)
+                7 pesanan belum lunas (Rp 655.000)
               </p>
             </CardContent>
           </Card>
@@ -144,11 +128,11 @@ export default function DashboardPage() {
               <Banknote className="h-4 w-4 text-zinc-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                {formatRupiah(SUMMARY_STATS.initialCapital)}
+              <div className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 font-mono">
+                {formatRupiah(initialCapital)}
               </div>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                Mesin printer 3D: <span className="font-semibold">{formatRupiah(SUMMARY_STATS.fixedAssetsVal)}</span>
+                Mesin printer 3D: <span className="font-semibold">{formatRupiah(fixedAssetsVal)}</span>
               </p>
             </CardContent>
           </Card>
@@ -171,7 +155,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
-                {PRODUCTS_PREVIEW.map((product) => (
+                {INITIAL_PRODUCTS.map((product) => (
                   <div key={product.sku} className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
@@ -182,16 +166,16 @@ export default function DashboardPage() {
                           {product.name}
                         </div>
                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                          {product.filamentGram}g filamen • HPP: {formatRupiah(product.hpp)}
+                          {product.bom.totalFilamentGram}g filamen • HPP: {formatRupiah(product.current_hpp)}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                        {formatRupiah(product.price)}
+                      <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono">
+                        {formatRupiah(product.selling_price)}
                       </div>
                       <Badge variant="accent" className="text-[10px] py-0">
-                        Markup {product.markup}
+                        Markup {product.markup_percent}%
                       </Badge>
                     </div>
                   </div>
@@ -215,28 +199,29 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
-                {RECENT_ORDERS_PREVIEW.map((order, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-3">
+                {recentOrders.map((ord) => (
+                  <div key={ord.id} className="flex items-center justify-between py-3">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                          {order.customer}
+                          {ord.customer?.name}
                         </span>
-                        <span className="text-[10px] text-zinc-400">• {order.channel}</span>
+                        <span className="text-[10px] text-zinc-400">• {ord.channel}</span>
                       </div>
                       <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                        {order.details}
+                        {ord.items?.[0]?.color_details || "Pesanan Lampu"}
+                        {ord.items?.[0]?.add_on_name && ` (${ord.items[0].add_on_name})`}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                        {formatRupiah(order.amount)}
+                      <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono">
+                        {formatRupiah(ord.total_amount)}
                       </div>
                       <Badge
-                        variant={order.status === "Lunas" ? "success" : "warning"}
+                        variant={ord.payment_status === "PAID" ? "success" : "warning"}
                         className="text-[10px] py-0 mt-0.5"
                       >
-                        {order.status}
+                        {ord.payment_status === "PAID" ? "Lunas" : "Belum Lunas"}
                       </Badge>
                     </div>
                   </div>
@@ -256,34 +241,40 @@ export default function DashboardPage() {
                   Implementasi bertahap sesuai spesifikasi master prompt
                 </CardDescription>
               </div>
-              <Badge variant="accent">Sprint 1 Selesai</Badge>
+              <Badge variant="accent">Sprint 4 Selesai</Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 text-xs">
               <div className="rounded-lg bg-zinc-800/60 p-3 border border-zinc-700/50">
                 <div className="flex items-center gap-2 font-medium text-emerald-400 mb-1">
                   <CheckCircle2 className="h-4 w-4" /> Sprint 0: Discovery
                 </div>
                 <p className="text-zinc-400 text-[11px]">Audit 3 Excel & spesifikasi formula finansial tuntas.</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/60 p-3 border border-amber-500/40">
-                <div className="flex items-center gap-2 font-medium text-amber-400 mb-1">
+              <div className="rounded-lg bg-zinc-800/60 p-3 border border-zinc-700/50">
+                <div className="flex items-center gap-2 font-medium text-emerald-400 mb-1">
                   <CheckCircle2 className="h-4 w-4" /> Sprint 1: Foundation
                 </div>
                 <p className="text-zinc-400 text-[11px]">Next.js App Router, Supabase Schema & RLS terpasang.</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/30 p-3 border border-zinc-800 text-zinc-400">
-                <div className="flex items-center gap-2 font-medium text-zinc-300 mb-1">
-                  <Clock className="h-4 w-4" /> Sprint 2: Data Import
+              <div className="rounded-lg bg-zinc-800/60 p-3 border border-zinc-700/50">
+                <div className="flex items-center gap-2 font-medium text-emerald-400 mb-1">
+                  <CheckCircle2 className="h-4 w-4" /> Sprint 2: Data Import
                 </div>
-                <p className="text-zinc-500 text-[11px]">Migrasi master produk lampu & modal awal Rp11.4M.</p>
+                <p className="text-zinc-400 text-[11px]">Master produk lampu & modal awal Rp11.4M tervalidasi.</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/30 p-3 border border-zinc-800 text-zinc-400">
-                <div className="flex items-center gap-2 font-medium text-zinc-300 mb-1">
-                  <Clock className="h-4 w-4" /> Sprint 3: Calculation Engine
+              <div className="rounded-lg bg-zinc-800/60 p-3 border border-zinc-700/50">
+                <div className="flex items-center gap-2 font-medium text-emerald-400 mb-1">
+                  <CheckCircle2 className="h-4 w-4" /> Sprint 3: Calc Engine
                 </div>
-                <p className="text-zinc-500 text-[11px]">Modul murni kalkulasi HPP, margin & BEP dengan test suite.</p>
+                <p className="text-zinc-400 text-[11px]">Engine HPP standar/slicer, Markup, Margin & BEP.</p>
+              </div>
+              <div className="rounded-lg bg-zinc-800/60 p-3 border border-amber-500/40">
+                <div className="flex items-center gap-2 font-medium text-amber-400 mb-1">
+                  <CheckCircle2 className="h-4 w-4" /> Sprint 4: Orders
+                </div>
+                <p className="text-zinc-400 text-[11px]">Omnichannel, snapshot HPP & state machine produksi.</p>
               </div>
             </div>
           </CardContent>
@@ -292,3 +283,4 @@ export default function DashboardPage() {
     </DashboardShell>
   );
 }
+

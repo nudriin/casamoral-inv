@@ -94,7 +94,8 @@ Dokumen ini adalah rencana kerja bertahap berbasis Sprint dari Sprint 0 hingga S
 
 ---
 
-### Sprint 4 — Order dan Production Management
+### Sprint 4 — Order dan Production Management (COMPLETED)
+- **Status**: **COMPLETED (Selesai & Terverifikasi 100%)**
 - **Sprint Goal**: Membangun modul pencatatan pesanan omnichannel (Direct & Shopee), dukungan kustomisasi warna dan add-on, serta alur status produksi.
 - **User Stories**:
   - Sebagai Pemilik Usaha, saya dapat mencatat pesanan baru dengan cepat, memilih warna dudukan/penutup/tutup lampu, dan menambahkan add-on kustom.

@@ -105,3 +105,45 @@ VALUES
         true
     )
 ON CONFLICT (sku) DO NOTHING;
+
+-- 6. Customers (Sheet: Orderan Casa Moral.xlsx)
+INSERT INTO public.customers (id, name, city, channel_source)
+VALUES
+    ('66666666-6666-6666-6666-666666666601', 'Mahput', 'Sukamara', 'Shopee'),
+    ('66666666-6666-6666-6666-666666666602', 'Gress', 'Palangka Raya', 'Direct'),
+    ('66666666-6666-6666-6666-666666666603', 'Acil Ely', 'Sukamara', 'Direct'),
+    ('66666666-6666-6666-6666-666666666604', 'Pelanggan Umum (Sukamara)', 'Sukamara', 'Direct'),
+    ('66666666-6666-6666-6666-666666666605', 'Istri Om Ridwan', 'Sukamara', 'Direct'),
+    ('66666666-6666-6666-6666-666666666606', 'Bang Dona', 'Sukamara', 'Direct'),
+    ('66666666-6666-6666-6666-666666666607', 'Pelanggan Display / Sampel', 'Sukamara', 'Direct'),
+    ('66666666-6666-6666-6666-666666666608', 'Wahyu', 'Palangka Raya', 'Direct'),
+    ('66666666-6666-6666-6666-666666666609', 'Mama', 'Sukamara', 'Direct')
+ON CONFLICT DO NOTHING;
+
+-- 7. Orders (9 Historical Orders from Orderan Casa Moral.xlsx, Total: Rp 945.000)
+INSERT INTO public.orders (id, order_number, order_date, customer_id, channel, status, subtotal_amount, add_on_amount, discount_amount, shipping_cost, platform_fee, total_amount, payment_status, paid_amount, notes)
+VALUES
+    ('77777777-7777-7777-7777-777777777701', 'ORD-2026-001', '2026-08-05 10:00:00+00', '66666666-6666-6666-6666-666666666601', 'Shopee', 'COMPLETED', 130000, 0, 0, 0, 15600, 130000, 'UNPAID', 0, 'Order via Shopee, checkout Sukamara'),
+    ('77777777-7777-7777-7777-777777777702', 'ORD-2026-002', '2026-08-06 11:00:00+00', '66666666-6666-6666-6666-666666666602', 'Direct', 'COMPLETED', 115000, 0, 15000, 0, 0, 115000, 'UNPAID', 0, 'Harga khusus promosi awal (Rp 115.000)'),
+    ('77777777-7777-7777-7777-777777777703', 'ORD-2026-003', '2026-08-07 14:00:00+00', '66666666-6666-6666-6666-666666666603', 'Direct', 'COMPLETED', 130000, 0, 0, 0, 0, 130000, 'UNPAID', 0, 'Pesanan Sukamara'),
+    ('77777777-7777-7777-7777-777777777704', 'ORD-2026-004', '2026-08-08 09:30:00+00', '66666666-6666-6666-6666-666666666604', 'Direct', 'COMPLETED', 150000, 0, 0, 0, 0, 150000, 'UNPAID', 0, 'Model Pomi (baris 10 Excel tanpa nama pelanggan)'),
+    ('77777777-7777-7777-7777-777777777705', 'ORD-2026-005', '2026-08-09 16:00:00+00', '66666666-6666-6666-6666-666666666605', 'Direct', 'COMPLETED', 130000, 0, 0, 0, 0, 130000, 'UNPAID', 0, 'Pesanan keluarga Sukamara'),
+    ('77777777-7777-7777-7777-777777777706', 'ORD-2026-006', '2026-08-10 11:00:00+00', '66666666-6666-6666-6666-666666666606', 'Direct', 'COMPLETED', 0, 0, 0, 0, 0, 0, 'UNPAID', 0, 'Unit sampel / hadiah promosi Bang Dona (Rp 0)'),
+    ('77777777-7777-7777-7777-777777777707', 'ORD-2026-007', '2026-08-11 13:00:00+00', '66666666-6666-6666-6666-666666666607', 'Direct', 'COMPLETED', 0, 0, 0, 0, 0, 0, 'UNPAID', 0, 'Unit display / sampel studio Kumo (Rp 0, baris 13 Excel)'),
+    ('77777777-7777-7777-7777-777777777708', 'ORD-2026-008', '2026-08-12 15:30:00+00', '66666666-6666-6666-6666-666666666608', 'Direct', 'COMPLETED', 130000, 30000, 0, 0, 0, 160000, 'PAID', 160000, 'Lunas transfer. Kustom cap figur Lee Jeno (+Rp 30.000)'),
+    ('77777777-7777-7777-7777-777777777709', 'ORD-2026-009', '2026-08-13 10:00:00+00', '66666666-6666-6666-6666-666666666609', 'Direct', 'COMPLETED', 130000, 0, 0, 0, 0, 130000, 'PAID', 130000, 'Lunas. Ollie tanpa cap atas.')
+ON CONFLICT (order_number) DO NOTHING;
+
+-- 8. Order Items with Immutable HPP Snapshot
+INSERT INTO public.order_items (id, order_id, product_id, quantity, unit_price, unit_hpp, color_details, add_on_name, add_on_price, subtotal)
+VALUES
+    ('88888888-8888-8888-8888-888888888801', '77777777-7777-7777-7777-777777777701', '55555555-5555-5555-5555-555555555502', 1, 130000, 89705.28, 'Base Pink + Shade Putih + Cap Putih', null, 0, 130000),
+    ('88888888-8888-8888-8888-888888888802', '77777777-7777-7777-7777-777777777702', '55555555-5555-5555-5555-555555555502', 1, 115000, 89705.28, 'Base Oren + Shade Putih + Cap Oren', null, 0, 115000),
+    ('88888888-8888-8888-8888-888888888803', '77777777-7777-7777-7777-777777777703', '55555555-5555-5555-5555-555555555502', 1, 130000, 89705.28, 'Base Oren + Shade Putih + Cap Oren', null, 0, 130000),
+    ('88888888-8888-8888-8888-888888888804', '77777777-7777-7777-7777-777777777704', '55555555-5555-5555-5555-555555555504', 1, 150000, 103892.16, 'Base Oren + Shade Putih + Cap Oren', null, 0, 150000),
+    ('88888888-8888-8888-8888-888888888805', '77777777-7777-7777-7777-777777777705', '55555555-5555-5555-5555-555555555502', 1, 130000, 89705.28, 'Base Oren + Shade Putih + Cap Oren', null, 0, 130000),
+    ('88888888-8888-8888-8888-888888888806', '77777777-7777-7777-7777-777777777706', '55555555-5555-5555-5555-555555555502', 1, 0, 89705.28, 'Base Oren + Shade Putih + Cap Oren', null, 0, 0),
+    ('88888888-8888-8888-8888-888888888807', '77777777-7777-7777-7777-777777777707', '55555555-5555-5555-5555-555555555503', 1, 0, 82588.08, 'Base Oren + Shade Putih', null, 0, 0),
+    ('88888888-8888-8888-8888-888888888808', '77777777-7777-7777-7777-777777777708', '55555555-5555-5555-5555-555555555502', 1, 130000, 89705.28, 'Base Oren + Shade Putih + Cap Oren', 'Cap Custom Figur Lee Jeno', 30000, 160000),
+    ('88888888-8888-8888-8888-888888888809', '77777777-7777-7777-7777-777777777709', '55555555-5555-5555-5555-555555555502', 1, 130000, 89705.28, 'Base Oren + Shade Putih No Cap', null, 0, 130000)
+ON CONFLICT DO NOTHING;

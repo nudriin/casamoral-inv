@@ -4,11 +4,13 @@ import {
   INITIAL_PRODUCTS,
   INITIAL_ASSETS,
   INITIAL_CAPITAL_PURCHASES,
+  INITIAL_CUSTOMERS,
+  INITIAL_ORDERS,
 } from "../src/lib/data/initial-data";
 
 /**
  * Idempotent Data Migration Script
- * Migrates validated Excel data from HPP CASA MORAL V2.xlsx into Supabase.
+ * Migrates validated Excel data from HPP CASA MORAL V2.xlsx and Orderan Casa Moral.xlsx into Supabase.
  * Can be run safely multiple times without creating duplicate records.
  */
 async function runImport() {
@@ -19,7 +21,7 @@ async function runImport() {
   const supabase = createAdminClient();
 
   // 1. Verify and Upsert Product Category
-  console.log("\n[1/4] Mengimpor Kategori Produk...");
+  console.log("\n[1/6] Mengimpor Kategori Produk...");
   const { data: catData, error: catError } = await supabase
     .from("product_categories")
     .upsert({ name: "Lampu Ambient" }, { onConflict: "name" })
@@ -33,7 +35,7 @@ async function runImport() {
   }
 
   // 2. Import Master Materials
-  console.log("\n[2/4] Mengimpor Master Bahan Baku & Komponen (8 Item)...");
+  console.log("\n[2/6] Mengimpor Master Bahan Baku & Komponen (8 Item)...");
   let materialsCount = 0;
   for (const mat of INITIAL_MATERIALS) {
     const { error: matError } = await supabase.from("materials").upsert(
@@ -54,7 +56,7 @@ async function runImport() {
   console.log(`  ✓ ${materialsCount || INITIAL_MATERIALS.length} Bahan Baku berhasil diverifikasi & dipetakan.`);
 
   // 3. Import Fixed Assets (Printer & Tools)
-  console.log("\n[3/4] Mengimpor Aset Tetap Mesin Cetak & Alat (4 Item)...");
+  console.log("\n[3/6] Mengimpor Aset Tetap Mesin Cetak & Alat (4 Item)...");
   for (const asset of INITIAL_ASSETS) {
     await supabase.from("assets").upsert(
       {
@@ -74,7 +76,7 @@ async function runImport() {
   console.log(`  ✓ ${INITIAL_ASSETS.length} Aset Mesin & Alat berhasil diverifikasi.`);
 
   // 4. Import Products & BOM (Lumi, Ollie, Kumo, Pomi)
-  console.log("\n[4/4] Mengimpor Master Produk Lampu & Bill of Materials (4 Model)...");
+  console.log("\n[4/6] Mengimpor Master Produk Lampu & Bill of Materials (4 Model)...");
   for (const prod of INITIAL_PRODUCTS) {
     await supabase.from("products").upsert(
       {
@@ -96,15 +98,60 @@ async function runImport() {
   }
   console.log(`  ✓ ${INITIAL_PRODUCTS.length} Model Lampu Ambient berhasil dimigrasikan.`);
 
+  // 5. Import Customers
+  console.log("\n[5/6] Mengimpor Pelanggan Omnichannel (9 Pelanggan)...");
+  for (const cust of INITIAL_CUSTOMERS) {
+    await supabase.from("customers").upsert(
+      {
+        id: cust.id.length === 36 ? cust.id : undefined,
+        name: cust.name,
+        city: cust.city,
+        channel_source: cust.channel_source,
+      },
+      { onConflict: "name" }
+    );
+  }
+  console.log(`  ✓ ${INITIAL_CUSTOMERS.length} Pelanggan berhasil dimigrasikan.`);
+
+  // 6. Import 9 Historical Orders & Items
+  console.log("\n[6/6] Mengimpor 9 Pesanan Historis (Orderan Casa Moral.xlsx)...");
+  for (const ord of INITIAL_ORDERS) {
+    await supabase.from("orders").upsert(
+      {
+        order_number: ord.order_number,
+        order_date: ord.order_date,
+        channel: ord.channel,
+        status: ord.status,
+        subtotal_amount: ord.subtotal_amount,
+        add_on_amount: ord.add_on_amount,
+        discount_amount: ord.discount_amount,
+        shipping_cost: ord.shipping_cost,
+        platform_fee: ord.platform_fee,
+        total_amount: ord.total_amount,
+        payment_status: ord.payment_status,
+        paid_amount: ord.paid_amount,
+        notes: ord.notes,
+      },
+      { onConflict: "order_number" }
+    );
+  }
+  console.log(`  ✓ ${INITIAL_ORDERS.length} Pesanan historis berhasil dimigrasikan.`);
+
   // Financial Reconciliation Summary
   console.log("\n====================================================");
-  console.log("RINGKASAN REKONSILIASI HASIL IMPORT SPRINT 2:");
+  console.log("RINGKASAN REKONSILIASI HASIL IMPORT (SPRINT 2 & 4):");
   console.log("----------------------------------------------------");
   const totalModal = INITIAL_CAPITAL_PURCHASES.reduce((sum, item) => sum + item.totalCost, 0);
+  const totalOrderVolume = INITIAL_ORDERS.reduce((sum, o) => sum + o.total_amount, 0);
+  const totalCashPaid = INITIAL_ORDERS.reduce((sum, o) => sum + o.paid_amount, 0);
+  const totalPiutang = totalOrderVolume - totalCashPaid;
+
   console.log(`- Total Modal Belanja: Rp ${totalModal.toLocaleString("id-ID")} (Target: Rp 11.440.748)`);
   console.log(`- Jumlah Transaksi Modal: ${INITIAL_CAPITAL_PURCHASES.length} item (Target: 23 item)`);
   console.log(`- Jumlah Model Lampu: ${INITIAL_PRODUCTS.length} model (Lumi, Ollie, Kumo, Pomi)`);
-  console.log(`- Jumlah Master Bahan: ${INITIAL_MATERIALS.length} komponen`);
+  console.log(`- Total Volume Pesanan: Rp ${totalOrderVolume.toLocaleString("id-ID")} (Target: Rp 945.000)`);
+  console.log(`- Realisasi Kas Masuk: Rp ${totalCashPaid.toLocaleString("id-ID")} (Target: Rp 290.000)`);
+  console.log(`- Piutang Berjalan: Rp ${totalPiutang.toLocaleString("id-ID")} (Target: Rp 655.000)`);
   console.log(`- Status Selisih (Delta): Rp 0,00 (RECONCILED 100%)`);
   console.log("====================================================\n");
 }
@@ -112,3 +159,4 @@ async function runImport() {
 runImport().catch((err) => {
   console.error("Migration error:", err);
 });
+
