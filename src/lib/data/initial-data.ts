@@ -1,0 +1,364 @@
+import { Product, Material, Asset } from "@/types/database";
+
+/**
+ * Validated Master Data extracted directly from:
+ * 1. Sheet/Data Casa Moral/HPP CASA MORAL V2.xlsx (Tabel 1, 2, 3, 4)
+ * 2. Sheet/Data Casa Moral/Orderan Casa Moral.xlsx
+ *
+ * Single Source of Truth for local demo, seeding, and database initialization.
+ */
+
+export interface CapitalPurchaseItem {
+  id: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  serviceFee: number;
+  totalCost: number;
+  category: "MESIN" | "FILAMEN" | "KELISTRIKAN" | "KEMASAN" | "ALAT";
+}
+
+// 23 Items of Initial Capital Purchases (Tabel 3 Excel, Total = Rp 11.440.748)
+export const INITIAL_CAPITAL_PURCHASES: CapitalPurchaseItem[] = [
+  { id: "cap-01", name: "Mesin Bambulab A1 Mini", unitPrice: 3587221, quantity: 1, serviceFee: 2000, totalCost: 3589221, category: "MESIN" },
+  { id: "cap-02", name: "Mesin Anycubic Kobra X", unitPrice: 5870800, quantity: 1, serviceFee: 2000, totalCost: 5872800, category: "MESIN" },
+  { id: "cap-03", name: "Filament eSUN PETG Clear", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
+  { id: "cap-04", name: "Filament eSUN PETG Transparent Blue", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
+  { id: "cap-05", name: "Filament eSUN PETG Transparent Pink", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
+  { id: "cap-06", name: "Filament eSUN PETG Black", unitPrice: 123001, quantity: 1, serviceFee: 2000, totalCost: 125001, category: "FILAMEN" },
+  { id: "cap-07", name: "Fitting E27 (Batch 1)", unitPrice: 5700, quantity: 5, serviceFee: 2000, totalCost: 30500, category: "KELISTRIKAN" },
+  { id: "cap-08", name: "Kabel Sakelar On/Off (Batch 1)", unitPrice: 9360, quantity: 5, serviceFee: 2000, totalCost: 48800, category: "KELISTRIKAN" },
+  { id: "cap-09", name: "Filament eSUN PLA Basic White", unitPrice: 154560, quantity: 1, serviceFee: 2000, totalCost: 156560, category: "FILAMEN" },
+  { id: "cap-10", name: "Filament eSUN PETG Natural", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
+  { id: "cap-11", name: "Filament IndoCart PLA Basic Orange", unitPrice: 135000, quantity: 2, serviceFee: 2000, totalCost: 272000, category: "FILAMEN" },
+  { id: "cap-12", name: "Filament IndoCart PLA Matte Sakura Pink", unitPrice: 147000, quantity: 1, serviceFee: 2000, totalCost: 149000, category: "FILAMEN" },
+  { id: "cap-13", name: "Filament IndoCart PLA Basic Dark Blue", unitPrice: 135000, quantity: 1, serviceFee: 2000, totalCost: 137000, category: "FILAMEN" },
+  { id: "cap-14", name: "Karet Pelindung Kabel", unitPrice: 675, quantity: 30, serviceFee: 2000, totalCost: 22250, category: "KELISTRIKAN" },
+  { id: "cap-15", name: "Kabel Sakelar On/Off (Batch 2)", unitPrice: 9360, quantity: 5, serviceFee: 2000, totalCost: 48800, category: "KELISTRIKAN" },
+  { id: "cap-16", name: "Kardus Karton 20 x 20 x 20", unitPrice: 3400, quantity: 20, serviceFee: 2000, totalCost: 70000, category: "KEMASAN" },
+  { id: "cap-17", name: "Bubble Wrap Roll 30cm x 50m", unitPrice: 30217, quantity: 1, serviceFee: 2000, totalCost: 32217, category: "KEMASAN" },
+  { id: "cap-18", name: "Fitting E27 (Batch 2)", unitPrice: 5700, quantity: 5, serviceFee: 2000, totalCost: 30500, category: "KELISTRIKAN" },
+  { id: "cap-19", name: "Jangka Sorong Digital", unitPrice: 45499, quantity: 1, serviceFee: 2000, totalCost: 47499, category: "ALAT" },
+  { id: "cap-20", name: "Kabel Sakelar On/Off (Batch 3)", unitPrice: 9360, quantity: 10, serviceFee: 2000, totalCost: 95600, category: "KELISTRIKAN" },
+  { id: "cap-21", name: "Magnet Neodium Bulat 20Pcs (3 set)", unitPrice: 15000, quantity: 3, serviceFee: 2000, totalCost: 47000, category: "ALAT" },
+  { id: "cap-22", name: "Fitting E27 (Batch 3)", unitPrice: 5700, quantity: 10, serviceFee: 2000, totalCost: 59000, category: "KELISTRIKAN" },
+  { id: "cap-23", name: "Bohlam Inlite 3W Putih / Warm White", unitPrice: 10500, quantity: 10, serviceFee: 2000, totalCost: 107000, category: "KELISTRIKAN" },
+];
+
+// Fixed Assets (Mesin & Alat Kerja)
+export const INITIAL_ASSETS: Asset[] = [
+  {
+    id: "asset-01",
+    name: "Mesin Bambulab A1 Mini",
+    category: "printer_3d",
+    purchase_date: "2026-08-01",
+    purchase_price: 3589221,
+    residual_value: 500000,
+    useful_life_months: 24,
+    estimated_hours_per_month: 150,
+    power_watts: 60,
+    status: "ACTIVE",
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "asset-02",
+    name: "Mesin Anycubic Kobra X",
+    category: "printer_3d",
+    purchase_date: "2026-08-01",
+    purchase_price: 5872800,
+    residual_value: 500000,
+    useful_life_months: 24,
+    estimated_hours_per_month: 150,
+    power_watts: 110,
+    status: "ACTIVE",
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "asset-03",
+    name: "Jangka Sorong Digital",
+    category: "tool",
+    purchase_date: "2026-08-01",
+    purchase_price: 47499,
+    residual_value: 0,
+    useful_life_months: 24,
+    estimated_hours_per_month: 50,
+    power_watts: 0,
+    status: "ACTIVE",
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "asset-04",
+    name: "Magnet Neodium Bulat 20Pcs (3 set)",
+    category: "tool",
+    purchase_date: "2026-08-01",
+    purchase_price: 47000,
+    residual_value: 0,
+    useful_life_months: 24,
+    estimated_hours_per_month: 50,
+    power_watts: 0,
+    status: "ACTIVE",
+    created_at: "2026-08-01T00:00:00Z",
+  },
+];
+
+// Master Materials & Raw Components (Tabel 1 Excel)
+export const INITIAL_MATERIALS: Material[] = [
+  {
+    id: "mat-01",
+    name: "Filamen PLA/PETG Standar (Campuran)",
+    category: "filament",
+    unit: "gram",
+    current_stock: 10000, // 10 kg
+    min_stock_alert: 1000,
+    cost_per_unit: 180, // Rp 180 / gram (Rp 180.000 / kg)
+    supplier: "IndoCart & eSUN Official Shopee",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "mat-02",
+    name: "Lampu LED Bulb / Module Inlite 3W",
+    category: "electrical",
+    unit: "pcs",
+    current_stock: 10,
+    min_stock_alert: 3,
+    cost_per_unit: 15000,
+    supplier: "Inlite Store Shopee",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "mat-03",
+    name: "Fitting Lampu E27",
+    category: "electrical",
+    unit: "pcs",
+    current_stock: 20,
+    min_stock_alert: 5,
+    cost_per_unit: 6000,
+    supplier: "Toko Listrik Shopee",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "mat-04",
+    name: "Kabel Sakelar On/Off",
+    category: "electrical",
+    unit: "pcs",
+    current_stock: 20,
+    min_stock_alert: 5,
+    cost_per_unit: 10000,
+    supplier: "Toko Listrik Shopee",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "mat-05",
+    name: "Karet Pelindung Kabel",
+    category: "electrical",
+    unit: "pcs",
+    current_stock: 30,
+    min_stock_alert: 5,
+    cost_per_unit: 700,
+    supplier: "Shopee",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "mat-06",
+    name: "Kardus Kemasan Karton 20x20x20",
+    category: "packaging",
+    unit: "pcs",
+    current_stock: 20,
+    min_stock_alert: 5,
+    cost_per_unit: 4500,
+    supplier: "Pabrik Box Shopee",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "mat-07",
+    name: "Bubble Wrap Roll 30cm x 50m",
+    category: "packaging",
+    unit: "meter",
+    current_stock: 50,
+    min_stock_alert: 5,
+    cost_per_unit: 1500,
+    supplier: "Shopee",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "mat-08",
+    name: "Sticker Label / Branding Casa Moral",
+    category: "packaging",
+    unit: "pcs",
+    current_stock: 100,
+    min_stock_alert: 10,
+    cost_per_unit: 1000,
+    supplier: "Percetakan Vinyl",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+  },
+];
+
+export interface ProductWithBOM extends Product {
+  bom: {
+    shadeGram: number;
+    baseGram: number;
+    capGram: number;
+    totalFilamentGram: number;
+    filamentCost: number;
+    electricalCost: number; // LED + Fitting + Sakelar + Pelindung
+    packagingCost: number;  // Kardus + Bubble Wrap + Stiker
+    subtotalMaterial: number;
+    overheadMultiplier: number;
+  };
+}
+
+// 4 Lamp Models (Tabel 2 & 4 Excel)
+export const INITIAL_PRODUCTS: ProductWithBOM[] = [
+  {
+    id: "prod-01",
+    sku: "CM-LUMI-01",
+    name: "Lampu Ambient - Lumi",
+    category_id: "cat-ambient",
+    description: "Lampu meja ambient 3D print model Lumi (Shade + Base, tanpa Cap). Cahaya hangat modern.",
+    dimensions: {
+      total_height_mm: 150,
+      shade_width_mm: 170,
+      shade_height_mm: 80,
+      base_height_mm: 70,
+      base_width_mm: 90,
+      nut_height_mm: 15,
+    },
+    calculation_mode: "STANDARD",
+    standard_overhead_multiplier: 1.2,
+    print_time_minutes: 240, // Estimasi 4 jam
+    current_hpp: 81182.4,
+    recommended_price: 121773.6,
+    selling_price: 120000,
+    markup_percent: 50.0,
+    is_active: true,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    bom: {
+      shadeGram: 97.59,
+      baseGram: 68.81,
+      capGram: 0.0,
+      totalFilamentGram: 166.4,
+      filamentCost: 29952,
+      electricalCost: 31700, // 15000 + 6000 + 10000 + 700
+      packagingCost: 6000,   // 4000 (kardus lumi) + 2000 (bubble)
+      subtotalMaterial: 67652,
+      overheadMultiplier: 1.2,
+    },
+  },
+  {
+    id: "prod-02",
+    sku: "CM-OLLIE-01",
+    name: "Lampu Ambient - Ollie",
+    category_id: "cat-ambient",
+    description: "Lampu meja ambient 3D print model Ollie (Shade + Base + Cap atas). Model terlaris Casa Moral.",
+    dimensions: {
+      total_height_mm: 180,
+      shade_width_mm: 163.3,
+      shade_height_mm: 80,
+      base_height_mm: 100,
+      base_width_mm: 112,
+      nut_height_mm: 15,
+    },
+    calculation_mode: "STANDARD",
+    standard_overhead_multiplier: 1.2,
+    print_time_minutes: 300, // Estimasi 5 jam
+    current_hpp: 89705.28,
+    recommended_price: 134557.92,
+    selling_price: 130000,
+    markup_percent: 50.0,
+    is_active: true,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    bom: {
+      shadeGram: 66.66,
+      baseGram: 119.26,
+      capGram: 17.16,
+      totalFilamentGram: 203.08,
+      filamentCost: 36554.4,
+      electricalCost: 31700,
+      packagingCost: 6500,   // 4500 (kardus) + 2000 (bubble)
+      subtotalMaterial: 74754.4,
+      overheadMultiplier: 1.2,
+    },
+  },
+  {
+    id: "prod-03",
+    sku: "CM-KUMO-01",
+    name: "Lampu Ambient - Kumo",
+    category_id: "cat-ambient",
+    description: "Lampu meja ambient 3D print model Kumo bentuk awan halus melengkung.",
+    dimensions: {
+      total_height_mm: 160,
+      shade_width_mm: 160,
+      shade_height_mm: 80,
+      base_height_mm: 80,
+      base_width_mm: 90,
+      nut_height_mm: 15,
+    },
+    calculation_mode: "STANDARD",
+    standard_overhead_multiplier: 1.2,
+    print_time_minutes: 270,
+    current_hpp: 82588.08,
+    recommended_price: 123882.12,
+    selling_price: 125000,
+    markup_percent: 50.0,
+    is_active: true,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    bom: {
+      shadeGram: 94.52,
+      baseGram: 70.16,
+      capGram: 5.45,
+      totalFilamentGram: 170.13,
+      filamentCost: 30623.4,
+      electricalCost: 31700,
+      packagingCost: 6500,
+      subtotalMaterial: 68823.4,
+      overheadMultiplier: 1.2,
+    },
+  },
+  {
+    id: "prod-04",
+    sku: "CM-POMI-01",
+    name: "Lampu Ambient - Pomi",
+    category_id: "cat-ambient",
+    description: "Lampu meja ambient 3D print model Pomi ukuran besar dengan kontur geometris estetis.",
+    dimensions: {
+      total_height_mm: 200,
+      shade_width_mm: 180,
+      shade_height_mm: 100,
+      base_height_mm: 100,
+      base_width_mm: 110,
+      nut_height_mm: 15,
+    },
+    calculation_mode: "STANDARD",
+    standard_overhead_multiplier: 1.2,
+    print_time_minutes: 360,
+    current_hpp: 103892.16,
+    recommended_price: 155838.24,
+    selling_price: 150000,
+    markup_percent: 50.0,
+    is_active: true,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    bom: {
+      shadeGram: 153.72,
+      baseGram: 84.05,
+      capGram: 30.99,
+      totalFilamentGram: 268.76,
+      filamentCost: 48376.8,
+      electricalCost: 31700,
+      packagingCost: 6500,
+      subtotalMaterial: 86576.8,
+      overheadMultiplier: 1.2,
+    },
+  },
+];

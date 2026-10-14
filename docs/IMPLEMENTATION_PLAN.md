@@ -10,7 +10,7 @@ Dokumen ini adalah rencana kerja bertahap berbasis Sprint dari Sprint 0 hingga S
 |---|---|---|---|---|
 | **Sprint 0** | **Discovery & Financial Specification** | Audit repositori, spreadsheet data aktual, formula finansial | Laporan discovery, spesifikasi formula, database design | **COMPLETED** |
 | **Sprint 1** | **Foundation & Database Architecture** | Inisialisasi Next.js, TypeScript, Tailwind, Supabase schema & RLS | Fondasi aplikasi, koneksi Supabase, migrasi database | **COMPLETED** |
-| **Sprint 2** | **Data Migration & Master Data** | Import data modal, bahan baku, produk lampu, dan seeding | Skrip migrasi terverifikasi, halaman master data | NOT STARTED |
+| **Sprint 2** | **Data Migration & Master Data** | Import data modal, bahan baku, produk lampu, dan seeding | Skrip migrasi terverifikasi, halaman master data | **COMPLETED** |
 | **Sprint 3** | **Financial Calculation Engine** | Modul kalkulasi HPP, markup, margin, BEP, dan fee platform | Unit test calculation engine tervalidasi 100% | NOT STARTED |
 | **Sprint 4** | **Order & Production Management** | Pencatatan pesanan omnichannel, varian warna, add-on kustom | Modul pesanan, pelacakan status produksi | NOT STARTED |
 | **Sprint 5** | **Sales, Expenses & Inventory** | Pembayaran kas, piutang, mutasi stok filamen, biaya operasional | Manajemen pembayaran, jurnal stok otomatis | NOT STARTED |
