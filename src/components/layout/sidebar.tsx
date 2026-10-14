@@ -11,6 +11,7 @@ import {
   Receipt,
   FileSpreadsheet,
   Printer,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,12 @@ const navigationItems = [
     name: "Pengeluaran",
     href: "/expenses",
     icon: Receipt,
+  },
+  {
+    name: "Kalkulator HPP & BEP",
+    href: "/calculator",
+    icon: Calculator,
+    badge: "Engine",
   },
   {
     name: "Laporan & BEP",

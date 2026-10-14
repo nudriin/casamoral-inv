@@ -2,9 +2,9 @@
 
 ## Status Proyek Terkini
 
-- **Sprint Aktif**: **Sprint 2 — Import Data dan Master Data Management**
-- **Status Sprint 2**: **COMPLETED (Selesai & Terverifikasi 100%)**
-- **Tanggal Selesai Sprint 2**: 15 Oktober 2026
+- **Sprint Aktif**: **Sprint 3 — Financial Calculation Engine**
+- **Status Sprint 3**: **COMPLETED (Selesai & Terverifikasi 100%)**
+- **Tanggal Selesai Sprint 3**: 15 Oktober 2026
 - **Lead Engineer / Architect**: AI Senior Full-Stack Agent
 
 ---
@@ -12,69 +12,75 @@
 ## 1. Pekerjaan yang Telah Selesai (Completed Work)
 
 ### Sprint 0 (Discovery & Audit) — COMPLETED
-- Audit menyeluruh terhadap master prompt, spreadsheet bisnis aktual, dan template acuan.
+- Audit dokumen dan inventarisasi 3 file spreadsheet.
 - Penyusunan 8 dokumen blueprint arsitektur di direktori `docs/`.
 
 ### Sprint 1 (Foundation & Database Architecture) — COMPLETED
-- Inisialisasi Next.js 16 (App Router), React 19, TypeScript strict mode, Tailwind CSS v4.
+- Next.js 16 (App Router), React 19, TypeScript strict mode, Tailwind CSS v4.
 - Integrasi Supabase client (browser, server async cookies, server-only admin).
-- Skema database 13 tabel dengan constraint relasional, index, dan Row Level Security (RLS).
-- UI component primitives dan layout responsif (`Sidebar`, `Header`, `DashboardShell`).
+- Migrasi database 13 tabel PostgreSQL dengan constraint, index, dan RLS aktif.
+- UI component system dan layout responsif studio (`Sidebar`, `Header`, `DashboardShell`).
 
 ### Sprint 2 (Import Data & Master Data Management) — COMPLETED
-1. **Dataset Master & Rekonsiliasi**:
-   - Dibuat `src/lib/data/initial-data.ts` sebagai single source of truth data master terverifikasi dari `HPP CASA MORAL V2.xlsx`:
-     - 4 Model Lampu Ambient (Lumi, Ollie, Kumo, Pomi) lengkap dengan Bill of Materials (BOM) perakitan dan gramatur filamen.
-     - 8 Komponen Bahan Baku (Filamen PLA/PETG, LED 3W, Fitting E27, Kabel Sakelar, Karet Pelindung, Kardus 20x20x20, Bubble Wrap, Sticker Label).
-     - 4 Aset Fisik Studio (Bambulab A1 Mini, Anycubic Kobra X, Jangka Sorong Digital, Magnet Neodium).
-     - 23 Catatan Transaksi Belanja Modal Awal senilai tepat Rp 11.440.748,00.
-2. **Data Services Layer**:
-   - `src/lib/services/products-service.ts`: Query katalog produk, BOM gramatur, HPP, harga jual, dan markup.
-   - `src/lib/services/materials-service.ts`: Query master bahan baku, monitoring stok, dan deteksi stok menipis.
-   - `src/lib/services/capital-service.ts`: Query aset tetap mesin cetak, rekapitulasi kategori modal awal, dan persentase alokasi.
-3. **Idempotent Migration Script**:
-   - `scripts/import-excel-data.ts`: Skrip migrasi terproteksi untuk mengimpor dan memvalidasi data Excel ke database Supabase tanpa duplikasi.
-4. **Antarmuka Pengelolaan Master Data (UI)**:
-   - **Halaman Produk & HPP (`/products`)**: Kartu visual 4 model lampu dengan rincian dimensi (tinggi total, lebar shade, tinggi base), komposisi gramatur BOM (shade, base, cap), komponen kelistrikan & kemasan, multiplier 1.2x, HPP, serta perbandingan Markup vs Margin Sejati.
-   - **Halaman Bahan & Stok (`/inventory`)**: Tabel master bahan baku, stok saat ini vs batas alert, biaya satuan, nama supplier, dan badge status persediaan.
-   - **Halaman Modal & Aset (`/capital`)**: Kartu KPI modal Rp11.4M, visual progress bar alokasi modal (Mesin 82.7%, Filamen 11.7%, Kelistrikan 3.9%, Kemasan 0.9%, Alat 0.8%), tabel aset mesin 3D printer (Bambu A1 Mini & Kobra X), dan buku catatan 23 transaksi belanja Shopee.
+- Dataset master terverifikasi [src/lib/data/initial-data.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/src/lib/data/initial-data.ts): 4 model lampu, 8 bahan baku, 4 aset printer, dan 23 transaksi modal Rp11.440.748 (Delta: Rp 0,00).
+- Skrip migrasi terproteksi [scripts/import-excel-data.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/scripts/import-excel-data.ts).
+- Tiga antarmuka master data: `/products`, `/inventory`, dan `/capital`.
+
+### Sprint 3 (Financial Calculation Engine) — COMPLETED
+1. **Modul HPP Dual-Mode ([src/lib/financial/hpp-calculator.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/src/lib/financial/hpp-calculator.ts))**:
+   - **Mode Standard**: Perhitungan berbasis multiplier overhead 1.20x Casa Moral untuk kompatibilitas data historis tanpa waktu cetak slicer.
+   - **Mode Advanced**: Perhitungan engineering presisi berbasis waktu cetak (menit), daya printer (watt), tarif PLN (Rp/kWh), depresiasi mesin per jam, reject rate multiplier `r / (1 - r)`, komponen aksesoris, kemasan, dan alokasi staf packing.
+   - Perhitungan depresiasi mesin per jam garis lurus `calculateDepreciationPerHour()`.
+   - Menggunakan `Decimal.js` untuk mencegah kesalahan pembulatan desimal JavaScript floating-point.
+2. **Modul Pricing & Profitability ([src/lib/financial/pricing-calculator.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/src/lib/financial/pricing-calculator.ts))**:
+   - Konverter dua arah: `convertMarkupToMargin()` dan `convertMarginToMarkup()`.
+   - Generator harga rekomendasi: `calculatePriceFromMarkup()` dan `calculatePriceFromMargin()`.
+   - Simulasi potongan platform Shopee: Admin fee (8%) dan Gratis Ongkir Xtra (4% capped di Rp 10.000).
+   - Analisis laba kotor riil dan margin bersih setelah potongan platform.
+3. **Modul Break-Even Point & Balik Modal ([src/lib/financial/bep-calculator.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/src/lib/financial/bep-calculator.ts))**:
+   - BEP Unit per bulan (`Math.ceil(Overhead / Margin Kontribusi)`) dan per hari.
+   - BEP Omzet bulanan (`BEP Unit * Harga Rata-rata`).
+   - Estimasi Laba Bersih Bulanan dan Payback Period (Waktu Balik Modal).
+   - Penanganan protektif jika margin kontribusi nol atau negatif.
+4. **Antarmuka Kalkulator Interaktif ([src/app/calculator/page.tsx](file:///D:/Nurdin/00_PROJECT/casamoral-inv/src/app/calculator/page.tsx))**:
+   - Tool simulator live dengan toggle Mode Standard vs Advanced, slider markup/margin, opsi fee Shopee, dan kartu hasil real-time.
+   - Terintegrasi pada navigasi sidebar studio.
 
 ---
 
 ## 2. Pengujian & Hasil Verifikasi (Testing & Verification)
 
 1. **Automated Unit Testing (`npm test` via Vitest)**:
-   - Status: **PASSED (11/11 tests across 2 test suites in 562ms)**.
-   - [tests/foundation.test.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/tests/foundation.test.ts): 5 unit tests lulus.
-   - [tests/sprint2-master-data.test.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/tests/sprint2-master-data.test.ts): 6 unit tests lulus:
-     - Verifikasi total 23 transaksi belanja = Rp 11.440.748,00 (Delta: Rp 0,00).
-     - Verifikasi rincian per kategori: Mesin (Rp9.462.021), Filamen (Rp1.339.561), Kelistrikan (Rp442.450), Kemasan (Rp102.217), Alat (Rp94.499).
-     - Verifikasi gramatur BOM dan HPP 4 model lampu (Lumi Rp81.182,40; Ollie Rp89.705,28; Kumo Rp82.588,08; Pomi Rp103.892,16).
+   - Status: **PASSED (25/25 tests across 3 test suites in 506ms)**.
+   - [tests/financial-engine.test.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/tests/financial-engine.test.ts): 14 unit tests lulus:
+     - 4 Model Casa Moral (Lumi, Ollie, Kumo, Pomi) cocok 100% dengan HPP dan harga jual Excel.
+     - Template ELS Studio BTS Arirang 4 Cap cocok presisi dengan sheet `HPP per Produk`.
+     - Konversi dua arah Markup dan Margin (50% markup = 33.33% margin; 50% margin = 100% markup).
+     - Shopee admin 8% dan Gratis Ongkir Xtra 4% (capped max Rp 10.000).
+     - BEP template ELS Studio dan Casa Moral Ollie (50 unit/bln pada overhead Rp 2.000.000).
+     - Penanganan margin kontribusi negatif tanpa crash.
+   - [tests/sprint2-master-data.test.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/tests/sprint2-master-data.test.ts): 6 tests lulus (rekonsiliasi Rp 11.440.748).
+   - [tests/foundation.test.ts](file:///D:/Nurdin/00_PROJECT/casamoral-inv/tests/foundation.test.ts): 5 tests lulus.
 2. **TypeScript Typecheck (`npx tsc --noEmit`)**:
    - Status: **PASSED (0 Errors)**.
 3. **ESLint Code Quality (`npm run lint`)**:
    - Status: **PASSED (0 Errors, 0 Warnings)**.
 4. **Production Build (`npm run build`)**:
-   - Status: **PASSED (Turbopack compiled in 3.1s)**.
-   - Route yang terverifikasi: `/`, `/products`, `/inventory`, `/capital`, `/_not-found`.
-5. **Live Dev Server Fetching (`http://localhost:3000`)**:
-   - Rute `/products`: 200 OK, me-render 4 model lampu & kartu BOM.
-   - Rute `/inventory`: 200 OK, me-render stok bahan & status alert.
-   - Rute `/capital`: 200 OK, me-render 23 catatan belanja & aset printer.
+   - Status: **PASSED (Turbopack compiled in 2.7s)**.
+   - Route yang terverifikasi: `/`, `/calculator`, `/products`, `/inventory`, `/capital`.
+5. **Live Dev Server Fetching (`http://localhost:3000/calculator`)**:
+   - Status: **200 OK**, interaksi live kalkulasi berjalan lancar.
 
 ---
 
-## 3. File yang Dibuat / Diubah pada Sprint 2
+## 3. File yang Dibuat / Diubah pada Sprint 3
 
-- `src/lib/data/initial-data.ts` (Baru)
-- `src/lib/services/products-service.ts` (Baru)
-- `src/lib/services/materials-service.ts` (Baru)
-- `src/lib/services/capital-service.ts` (Baru)
-- `scripts/import-excel-data.ts` (Baru)
-- `src/app/products/page.tsx` (Baru)
-- `src/app/inventory/page.tsx` (Baru)
-- `src/app/capital/page.tsx` (Baru)
-- `tests/sprint2-master-data.test.ts` (Baru)
+- `src/lib/financial/hpp-calculator.ts` (Baru)
+- `src/lib/financial/pricing-calculator.ts` (Baru)
+- `src/lib/financial/bep-calculator.ts` (Baru)
+- `src/app/calculator/page.tsx` (Baru)
+- `src/components/layout/sidebar.tsx` (Diperbarui navigasi)
+- `tests/financial-engine.test.ts` (Baru)
 - `docs/PROGRESS.md` (Diperbarui)
 - `docs/IMPLEMENTATION_PLAN.md` (Diperbarui)
 
@@ -82,8 +88,8 @@
 
 ## 4. Langkah Berikutnya (Next Actions)
 
-- **Sprint 3: Financial Calculation Engine**:
-  - Membangun modul kalkulasi HPP murni (`src/lib/financial/hpp-calculator.ts`) dengan Dual-Mode (Standard 1.2x & Advanced time-based slicing).
-  - Membangun modul pricing & margin converter (`src/lib/financial/pricing-calculator.ts`) dengan simulasi fee Shopee.
-  - Membangun modul BEP & Payback Period (`src/lib/financial/bep-calculator.ts`).
-  - Unit test suite komprehensif menguji rekonsiliasi matematis terhadap 4 model Casa Moral dan 15 produk template ELS Studio.
+- **Sprint 4: Order dan Production Management**:
+  - Memigrasikan 9 transaksi pesanan awal dari `Orderan Casa Moral.xlsx`.
+  - Membangun halaman daftar pesanan (`/orders`) dengan filter status produksi dan pembayaran.
+  - Membangun form pembuatan pesanan baru (`/orders/new`) dengan pemilihan varian warna (*Base, Shade, Cap*) dan add-on kustom.
+  - Membangun detail pesanan (`/orders/[id]`) yang menyimpan snapshot HPP dan harga jual permanen.
