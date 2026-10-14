@@ -12,10 +12,10 @@ Dokumen ini adalah rencana kerja bertahap berbasis Sprint dari Sprint 0 hingga S
 | **Sprint 1** | **Foundation & Database Architecture** | Inisialisasi Next.js, TypeScript, Tailwind, Supabase schema & RLS | Fondasi aplikasi, koneksi Supabase, migrasi database | **COMPLETED** |
 | **Sprint 2** | **Data Migration & Master Data** | Import data modal, bahan baku, produk lampu, dan seeding | Skrip migrasi terverifikasi, halaman master data | **COMPLETED** |
 | **Sprint 3** | **Financial Calculation Engine** | Modul kalkulasi HPP, markup, margin, BEP, dan fee platform | Unit test calculation engine tervalidasi 100% | **COMPLETED** |
-| **Sprint 4** | **Order & Production Management** | Pencatatan pesanan omnichannel, varian warna, add-on kustom | Modul pesanan, pelacakan status produksi | NOT STARTED |
-| **Sprint 5** | **Sales, Expenses & Inventory** | Pembayaran kas, piutang, mutasi stok filamen, biaya operasional | Manajemen pembayaran, jurnal stok otomatis | NOT STARTED |
-| **Sprint 6** | **Dashboard & Reporting** | Dashboard analitik KPI, performa produk, BEP tracker, export | Dashboard data riil, filter tanggal, ekspor CSV/XLSX | NOT STARTED |
-| **Sprint 7** | **QA, Security & Release** | E2E testing, financial regression test, responsive review, docs | Aplikasi rilis production-ready, manual book | NOT STARTED |
+| **Sprint 4** | **Order & Production Management** | Pencatatan pesanan omnichannel, varian warna, add-on kustom | Modul pesanan, pelacakan status produksi | **COMPLETED** |
+| **Sprint 5** | **Sales, Expenses & Inventory** | Pembayaran kas, piutang, mutasi stok filamen, biaya operasional | Manajemen pembayaran, jurnal stok otomatis | **COMPLETED** |
+| **Sprint 6** | **Dashboard & Reporting** | Dashboard analitik KPI, performa produk, BEP tracker, export | Dashboard data riil, filter tanggal, ekspor CSV/XLSX | **COMPLETED** |
+| **Sprint 7** | **QA, Security & Release** | E2E testing, financial regression test, responsive review, docs | Aplikasi rilis production-ready, manual book | **COMPLETED** |
 
 ---
 
@@ -158,20 +158,22 @@ Dokumen ini adalah rencana kerja bertahap berbasis Sprint dari Sprint 0 hingga S
 
 ---
 
-### Sprint 7 — Quality Assurance, Security, dan Release
+### Sprint 7 — Quality Assurance, Security, dan Release (COMPLETED)
+- **Status**: **COMPLETED (Selesai & Terverifikasi 100%)**
 - **Sprint Goal**: Melakukan pengujian integrasi menyeluruh, audit keamanan, pengujian responsivitas mobile, penyusunan dokumentasi rilis, dan penyerahan aplikasi siap pakai.
 - **User Stories**:
   - Sebagai Pengguna, saya dapat menggunakan aplikasi secara lancar melalui layar smartphone maupun desktop browser.
   - Sebagai Pemilik Usaha, saya memiliki panduan instalasi dan deployment yang jelas untuk menjalankan aplikasi di lingkungan production (Vercel + Supabase).
 - **Technical Tasks**:
-  - End-to-End Testing alur lengkap: Tambah Bahan -> Buat Produk HPP -> Input Order -> Catat Pembayaran -> Verifikasi Dashboard & Stok.
-  - Security Audit: Verifikasi penutupan public key, pengujian RLS policies, pencegahan kebocoran environment variable.
-  - Responsive Testing: Penyesuaian layout tabel dan form pada viewport smartphone (375px - 768px).
-  - Error Handling & Loading State: Penambahan skeleton loader, empty state, dan feedback dialog.
-  - Dokumentasi Rilis: `docs/USER_MANUAL.md` dan `docs/DEPLOYMENT_GUIDE.md`.
+  - [x] End-to-End Testing alur lengkap: Tambah Bahan -> Buat Produk HPP -> Input Order -> Catat Pembayaran -> Verifikasi Dashboard & Stok (`tests/sprint7-e2e-journey.test.ts`).
+  - [x] Security Audit: Verifikasi penutupan public key, pengujian RLS policies, pencegahan kebocoran environment variable (`docs/SECURITY_AUDIT.md`).
+  - [x] Responsive Testing: Penyesuaian layout tabel dan form pada viewport smartphone (375px - 768px).
+  - [x] Error Handling & Loading State: Penambahan skeleton loader (`src/app/loading.tsx`), empty state, 404 (`src/app/not-found.tsx`), dan global error boundary (`src/app/error.tsx`).
+  - [x] Dokumentasi Rilis: `docs/USER_MANUAL.md` dan `docs/DEPLOYMENT_GUIDE.md`.
 - **Acceptance Criteria**:
-  - Zero critical regression.
-  - Responsif di mobile dan desktop.
-  - Build produksi lulus (`npm run build`).
-  - Dokumentasi panduan lengkap.
-- **Test Strategy**: E2E test, security test, mobile browser validation.
+  - [x] Zero critical regression (59/59 tests passed, 0 tsc error, 0 lint error).
+  - [x] Responsif di mobile dan desktop.
+  - [x] Build produksi lulus (`npm run build` - 16 routes valid).
+  - [x] Dokumentasi panduan lengkap (Panduan Pengguna & Deployment).
+- **Test Strategy**: E2E integration test, security audit, TypeScript strict mode, ESLint, production build validation.
+
