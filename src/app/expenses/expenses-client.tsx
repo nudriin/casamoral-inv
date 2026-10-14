@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { createExpenseAction } from "./actions";
+import { createExpenseAction, createExpenseCategoryAction, deleteExpenseAction } from "./actions";
 import {
   Search,
   Receipt,
@@ -16,6 +16,8 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  Trash2,
+  Tag,
 } from "lucide-react";
 
 interface ExpensesClientProps {
@@ -23,10 +25,18 @@ interface ExpensesClientProps {
   categories: ExpenseCategory[];
 }
 
-export function ExpensesClient({ initialExpenses, categories }: ExpensesClientProps) {
+export function ExpensesClient({ initialExpenses, categories: initialCategories }: ExpensesClientProps) {
   const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const [categories, setCategories] = useState<ExpenseCategory[]>(initialCategories);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+
+  // New Category Form State
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatIsFixed, setNewCatIsFixed] = useState(true);
+  const [newCatDesc, setNewCatDesc] = useState("");
+  const [isSubmittingCat, setIsSubmittingCat] = useState(false);
 
   // Search & Filters
   const [search, setSearch] = useState("");
@@ -35,7 +45,7 @@ export function ExpensesClient({ initialExpenses, categories }: ExpensesClientPr
 
   // Form states
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 10));
-  const [categoryId, setCategoryId] = useState(categories[0]?.id || "");
+  const [categoryId, setCategoryId] = useState(initialCategories[0]?.id || "");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number | "">("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("TRANSFER");
@@ -97,7 +107,6 @@ export function ExpensesClient({ initialExpenses, categories }: ExpensesClientPr
         setExpenses([res.expense, ...expenses]);
         setSuccessMsg(`Pengeluaran ${formatRupiah(numAmount)} berhasil dicatat.`);
         setDescription("");
-        setAmount("");
         setNotes("");
         setShowAddForm(false);
         router.refresh();
@@ -110,21 +119,148 @@ export function ExpensesClient({ initialExpenses, categories }: ExpensesClientPr
     }
   };
 
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    setIsSubmittingCat(true);
+    setErrorMsg(null);
+
+    const res = await createExpenseCategoryAction(newCatName.trim(), newCatIsFixed, newCatDesc.trim());
+    setIsSubmittingCat(false);
+
+    if (res.success && res.category) {
+      setCategories((prev) => [...prev, res.category!]);
+      setCategoryId(res.category.id);
+      setSuccessMsg(`Kategori "${res.category.name}" berhasil dibuat.`);
+      setShowAddCategoryModal(false);
+      setNewCatName("");
+      setNewCatDesc("");
+    } else {
+      setErrorMsg(res.error || "Gagal menambahkan kategori.");
+    }
+  };
+
+  const handleDeleteExpense = async (id: string, desc: string) => {
+    if (!confirm(`Hapus catatan pengeluaran "${desc}"?`)) return;
+    const res = await deleteExpenseAction(id);
+    if (res.success) {
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+      setSuccessMsg(`Pengeluaran "${desc}" berhasil dihapus.`);
+    } else {
+      setErrorMsg(res.error || "Gagal menghapus pengeluaran.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Action Header & Toggle Form Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="text-xs text-zinc-500">
           Total {filteredExpenses.length} transaksi pengeluaran terdaftar.
         </div>
-        <Button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-semibold text-xs shadow-xs"
-        >
-          {showAddForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showAddForm ? "Tutup Formulir" : "Catat Pengeluaran Baru"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowAddCategoryModal(true)}
+            className="gap-1.5 text-xs"
+          >
+            <Tag className="w-3.5 h-3.5" />
+            Tambah Kategori
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="gap-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-semibold text-xs shadow-xs"
+          >
+            {showAddForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showAddForm ? "Tutup Formulir" : "Catat Pengeluaran Baru"}
+          </Button>
+        </div>
       </div>
+
+      {/* Category Creation Modal */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
+              <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                <Tag className="w-4 h-4 text-amber-500" />
+                Tambah Kategori Pengeluaran
+              </h3>
+              <button
+                onClick={() => setShowAddCategoryModal(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateCategory} className="p-4 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  Nama Kategori *
+                </label>
+                <Input
+                  required
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="Contoh: Perawatan Printer & Nozzle"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  Klasifikasi Biaya
+                </label>
+                <select
+                  value={newCatIsFixed ? "fixed" : "variable"}
+                  onChange={(e) => setNewCatIsFixed(e.target.value === "fixed")}
+                  className="w-full h-8 px-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                >
+                  <option value="fixed">Biaya Tetap (Fixed Cost - BEP)</option>
+                  <option value="variable">Biaya Variabel (Variable Cost)</option>
+                </select>
+                <span className="text-[10px] text-zinc-500 block">
+                  Biaya tetap masuk dalam target BEP bulanan (seperti listrik, sewa, internet).
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  Deskripsi (Opsional)
+                </label>
+                <Input
+                  value={newCatDesc}
+                  onChange={(e) => setNewCatDesc(e.target.value)}
+                  placeholder="Keterangan singkat kategori"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setShowAddCategoryModal(false)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmittingCat || !newCatName.trim()}
+                  className="bg-amber-500 hover:bg-amber-600 text-zinc-950 font-semibold text-xs"
+                >
+                  {isSubmittingCat ? "Menyimpan..." : "Simpan Kategori"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Alerts */}
       {errorMsg && (
@@ -327,6 +463,7 @@ export function ExpensesClient({ initialExpenses, categories }: ExpensesClientPr
                   <th className="py-3 px-4">Metode</th>
                   <th className="py-3 px-4 text-center">Jenis Biaya</th>
                   <th className="py-3 px-4 text-right">Nominal Pengeluaran</th>
+                  <th className="py-3 px-4 text-center w-12">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800">
@@ -376,6 +513,16 @@ export function ExpensesClient({ initialExpenses, categories }: ExpensesClientPr
 
                     <td className="py-3.5 px-4 align-top text-right font-mono font-bold text-zinc-900 dark:text-zinc-100">
                       {formatRupiah(exp.amount)}
+                    </td>
+
+                    <td className="py-3.5 px-4 align-top text-center">
+                      <button
+                        onClick={() => handleDeleteExpense(exp.id, exp.description)}
+                        className="p-1 text-zinc-400 hover:text-rose-600 transition-colors"
+                        title="Hapus Pengeluaran"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}

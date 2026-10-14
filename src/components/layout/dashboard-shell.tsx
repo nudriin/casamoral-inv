@@ -19,7 +19,7 @@ export function DashboardShell({ children, title, subtitle }: DashboardShellProp
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header
           onMenuClick={() => setSidebarOpen(true)}
           title={title}

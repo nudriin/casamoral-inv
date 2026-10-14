@@ -1,6 +1,5 @@
 import React from "react";
 import { getSalesAnalytics } from "@/lib/services/reports-service";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { SalesAnalyticsClient } from "./sales-analytics-client";
 
 export const metadata = {
@@ -12,11 +11,6 @@ export default async function SalesAnalyticsPage() {
   const analytics = await getSalesAnalytics();
 
   return (
-    <DashboardShell
-      title="Analisis Penjualan & Performa Produk"
-      subtitle="Evaluasi Profitabilitas per Model Lampu, Volume Terjual, dan Beban Mesin Cetak"
-    >
-      <SalesAnalyticsClient analytics={analytics} />
-    </DashboardShell>
+    <SalesAnalyticsClient analytics={analytics} />
   );
 }

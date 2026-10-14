@@ -275,9 +275,138 @@ export async function getMaterialsSummary() {
 }
 
 /**
+ * Create a new raw material / component
+ */
+export async function createMaterial(payload: {
+  name: string;
+  category: Material["category"];
+  unit: Material["unit"];
+  current_stock: number;
+  min_stock_alert: number;
+  cost_per_unit: number;
+  supplier?: string;
+}): Promise<Material> {
+  if (!payload.name || !payload.name.trim()) {
+    throw new Error("Nama bahan baku / komponen wajib diisi.");
+  }
+  if (payload.cost_per_unit < 0) {
+    throw new Error("Biaya satuan tidak boleh negatif.");
+  }
+
+  const nowIso = new Date().toISOString();
+  const newMaterial: Material = {
+    id: `mat-${Date.now()}`,
+    name: payload.name.trim(),
+    category: payload.category,
+    unit: payload.unit,
+    current_stock: Math.max(0, payload.current_stock || 0),
+    min_stock_alert: Math.max(0, payload.min_stock_alert || 0),
+    cost_per_unit: payload.cost_per_unit,
+    supplier: payload.supplier?.trim() || null,
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+
+  memoryMaterials.push(newMaterial);
+
+  // If initial stock > 0, log an initial stock movement
+  if (newMaterial.current_stock > 0) {
+    const movement: StockMovement = {
+      id: `mov-${Date.now()}`,
+      material_id: newMaterial.id,
+      movement_type: "PURCHASE",
+      quantity: newMaterial.current_stock,
+      notes: "Saldo awal persediaan bahan baku",
+      created_at: nowIso,
+    };
+    memoryMovements.unshift(movement);
+  }
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      await supabase.from("materials").insert({
+        id: newMaterial.id,
+        name: newMaterial.name,
+        category: newMaterial.category,
+        unit: newMaterial.unit,
+        current_stock: newMaterial.current_stock,
+        min_stock_alert: newMaterial.min_stock_alert,
+        cost_per_unit: newMaterial.cost_per_unit,
+        supplier: newMaterial.supplier,
+      });
+    } catch {
+      // Fallback
+    }
+  }
+
+  return newMaterial;
+}
+
+/**
+ * Update an existing material
+ */
+export async function updateMaterial(
+  id: string,
+  payload: Partial<Omit<Material, "id" | "created_at">>
+): Promise<Material> {
+  const index = memoryMaterials.findIndex((m) => m.id === id);
+  if (index === -1) {
+    throw new Error(`Bahan baku ID "${id}" tidak ditemukan.`);
+  }
+
+  const existing = memoryMaterials[index];
+  const updated: Material = {
+    ...existing,
+    ...payload,
+    updated_at: new Date().toISOString(),
+  };
+
+  memoryMaterials[index] = updated;
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      await supabase.from("materials").update(payload).eq("id", id);
+    } catch {
+      // Fallback
+    }
+  }
+
+  return updated;
+}
+
+/**
+ * Delete a material
+ */
+export async function deleteMaterial(id: string): Promise<boolean> {
+  const index = memoryMaterials.findIndex((m) => m.id === id);
+  if (index === -1) {
+    throw new Error(`Bahan baku ID "${id}" tidak ditemukan.`);
+  }
+
+  memoryMaterials.splice(index, 1);
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      await supabase.from("materials").delete().eq("id", id);
+    } catch {
+      // Fallback
+    }
+  }
+
+  return true;
+}
+
+/**
  * Reset memory materials and movements (for automated testing isolation)
  */
 export function resetMemoryMaterials(): void {
   memoryMaterials = JSON.parse(JSON.stringify(INITIAL_MATERIALS));
   memoryMovements = JSON.parse(JSON.stringify(INITIAL_STOCK_MOVEMENTS));
 }
+

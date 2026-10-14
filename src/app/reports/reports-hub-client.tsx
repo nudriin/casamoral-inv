@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Package,
 } from "lucide-react";
+import { FinancialIndicatorInfo, FinancialGlossaryModalButton } from "@/components/financial-indicator-guide";
 
 interface ReportsHubClientProps {
   pl: ProfitLossStatement;
@@ -141,6 +142,19 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders }: ReportsHubClie
 
   return (
     <div className="space-y-6">
+      {/* Top Banner with Glossary Trigger */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 shadow-xs">
+        <div>
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+            Pusat Pelaporan Finansial & Operasional Studio
+          </h2>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Laporan berbasis transaksi terverifikasi dan standar akuntansi SAK EMKM
+          </p>
+        </div>
+        <FinancialGlossaryModalButton />
+      </div>
+
       {/* 3 Main Report Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Report 1: Laba Rugi */}
@@ -150,8 +164,9 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders }: ReportsHubClie
               <Badge variant="accent">Finansial Akrual</Badge>
               <TrendingUp className="w-4 h-4 text-amber-500" />
             </div>
-            <CardTitle className="text-base font-semibold pt-1">
-              Laporan Laba Rugi
+            <CardTitle className="text-base font-semibold pt-1 flex items-center justify-between">
+              <span>Laporan Laba Rugi</span>
+              <FinancialIndicatorInfo indicatorKey="laba_kotor" />
             </CardTitle>
             <div className="text-xs text-zinc-500">
               Breakdown Pendapatan Bersih, HPP Riil, Beban Tetap & Variabel, serta Laba Bersih.
@@ -187,8 +202,9 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders }: ReportsHubClie
               <Badge variant="success">Metode Langsung</Badge>
               <Wallet className="w-4 h-4 text-emerald-500" />
             </div>
-            <CardTitle className="text-base font-semibold pt-1">
-              Laporan Arus Kas
+            <CardTitle className="text-base font-semibold pt-1 flex items-center justify-between">
+              <span>Laporan Arus Kas</span>
+              <FinancialIndicatorInfo indicatorKey="arus_kas_masuk" />
             </CardTitle>
             <div className="text-xs text-zinc-500">
               Aliran Kas Masuk Operasional, Kas Keluar Beban, Investasi Mesin, dan Saldo Likuiditas.

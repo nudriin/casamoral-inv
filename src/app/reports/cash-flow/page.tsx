@@ -1,6 +1,5 @@
 import React from "react";
 import { getCashFlowStatement } from "@/lib/services/reports-service";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CashFlowClient } from "./cash-flow-client";
 
 export const metadata = {
@@ -12,11 +11,6 @@ export default async function CashFlowPage() {
   const statement = await getCashFlowStatement();
 
   return (
-    <DashboardShell
-      title="Laporan Arus Kas (Cash Flow)"
-      subtitle="Monitoring Aliran Kas Masuk, Kas Keluar Operasional, dan Posisi Likuiditas"
-    >
-      <CashFlowClient statement={statement} />
-    </DashboardShell>
+    <CashFlowClient statement={statement} />
   );
 }

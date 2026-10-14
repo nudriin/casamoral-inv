@@ -19,6 +19,7 @@ import {
   HelpCircle,
   Sparkles,
 } from "lucide-react";
+import { FinancialIndicatorInfo, FinancialGlossaryModalButton } from "@/components/financial-indicator-guide";
 
 interface ProfitLossClientProps {
   statement: ProfitLossStatement;
@@ -81,6 +82,7 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <FinancialGlossaryModalButton />
           <Button
             onClick={handleExportCSV}
             size="sm"
@@ -97,7 +99,10 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
-              <span>Pendapatan Bersih (Net)</span>
+              <span className="flex items-center gap-1.5">
+                <span>Pendapatan Bersih (Net)</span>
+                <FinancialIndicatorInfo indicatorKey="pendapatan_bersih" />
+              </span>
               <TrendingUp className="w-4 h-4 text-blue-500" />
             </CardTitle>
           </CardHeader>
@@ -114,7 +119,10 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
         <Card className="border-l-4 border-l-amber-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
-              <span>Laba Kotor (Gross Profit)</span>
+              <span className="flex items-center gap-1.5">
+                <span>Laba Kotor (Gross Profit)</span>
+                <FinancialIndicatorInfo indicatorKey="laba_kotor" />
+              </span>
               <Coins className="w-4 h-4 text-amber-500" />
             </CardTitle>
           </CardHeader>
@@ -131,7 +139,10 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
         <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
-              <span>Beban Operasional (OPEX)</span>
+              <span className="flex items-center gap-1.5">
+                <span>Beban Operasional (OPEX)</span>
+                <FinancialIndicatorInfo indicatorKey="laba_operasional" />
+              </span>
               <Receipt className="w-4 h-4 text-purple-500" />
             </CardTitle>
           </CardHeader>
@@ -148,7 +159,10 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
         <Card className={`border-l-4 ${isProfitable ? "border-l-emerald-500" : "border-l-rose-500"}`}>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
-              <span>Laba / (Rugi) Operasional</span>
+              <span className="flex items-center gap-1.5">
+                <span>Laba Operasional Bersih</span>
+                <FinancialIndicatorInfo indicatorKey="laba_operasional" />
+              </span>
               <Sparkles className={`w-4 h-4 ${isProfitable ? "text-emerald-500" : "text-rose-500"}`} />
             </CardTitle>
           </CardHeader>

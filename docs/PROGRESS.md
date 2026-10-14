@@ -320,5 +320,45 @@
 | **Sprint 6** | **Dashboard & Reporting** | **COMPLETED** | Laba Rugi komprehensif, Arus Kas metode langsung, analitik produk, dashboard eksekutif, ekspor CSV UTF-8. |
 | **Sprint 7** | **Quality Assurance, Security & Release** | **COMPLETED** | 59 unit/E2E test suite (100% pass), audit RLS, UI error/loading state, user manual, deployment guide. |
 
-**Kesimpulan Rilis**: Seluruh batasan, formula finansial, aturan bisnis, dan modul yang diamanatkan dalam Single Source of Truth (`INSTRUCTION.md`) telah terimplementasi secara lengkap, lulus seluruh parameter pengujian teknis, dan siap untuk tahap produksi (*Production Ready*).
+## 13. Revision & Feature Completion Master Execution (Fase 1 s/d Fase 7)
+
+### 13.1 Latar Belakang & Ruang Lingkup
+Melanjutkan implementasi Sprint 1–7 dengan mengeksekusi secara tuntas instruksi master revision:
+1. **Fase 1**: Audit mendalam arsitektur data, tombol non-fungsional, dan akar masalah hilangnya sidebar pada route tertentu.
+2. **Fase 2**: Penambahan dukungan tema Light Mode & Dark Mode dengan toggle di Header dan Settings, anti-FOUC inline script, serta pemindahan shared `<DashboardShell>` ke `src/app/layout.tsx` yang secara permanen menyelesaikan bug hilangnya sidebar pada `/orders`, `/expenses`, dan seluruh turunannya.
+3. **Fase 3**: Pemisahan hierarki Produk vs Model Produk (fleksibel untuk non-lampu seperti dekorasi dan custom), aktivasi tombol **Tambah Model Baru** dengan editor BOM dinamis, berat filamen, daya listrik, reject rate, waktu cetak, dan live HPP preview. Model baru otomatis muncul di katalog dan dropdown `/orders/new`.
+4. **Fase 4**: CRUD penuh di seluruh modul master data dan transaksi:
+   - **Bahan Baku & Stok (`/inventory`)**: Tambah Bahan, Edit Bahan, dan Mutasi Stok (IN/OUT/ADJUSTMENT) dengan verifikasi atomic balance.
+   - **Modal & Aset (`/capital`)**: Tambah Aset (dengan watt printer, umur ekonomis, nilai sisa) dan Tambah Transaksi Modal.
+   - **Pengeluaran (`/expenses`)**: Tambah Pengeluaran, Hapus Pengeluaran, dan Tambah Kategori Beban Baru.
+5. **Fase 5**: Modul Utang Usaha (`/payables`) dan Pengaturan Bisnis (`/settings`):
+   - **Cicilan Anycubic Kobra X**: Dicatat sebagai kewajiban Shopee PayLater 3 bulan (1 Nov 2026, 1 Des 2026, 1 Jan 2027 @ Rp 1.957.600, total Rp 5.872.800). Seluruh angsuran berstatus AWAL BELUM LUNAS (*Unpaid*).
+   - Integrasi pencatatan pembayaran cicilan ke Arus Kas Pendanaan (*Financing Cash Outflow*) tanpa mengacaukan beban operasional atau laba kotor.
+   - **Settings Dashboard (`/settings`)**: Konfigurasi Markup vs Margin global, tarif marketplace Shopee (8% admin + 4% gratis ongkir cap 10.000), asumsi biaya listrik & depresiasi, serta preferensi tema tampilan.
+6. **Fase 6**: Penjelasan dan panduan 20 indikator keuangan lengkap (definisi sederhana, formula, contoh riil, hal yang tidak termasuk, dan sumber data) via popover `<FinancialIndicatorInfo>` dan modal pencarian glosarium `<FinancialGlossaryModalButton>` di Dashboard, Reports, dan Calculator.
+7. **Fase 7**: Verifikasi kualitas dan automated regression tests:
+   - Vitest: **74 tests passing (100% lulus di 8 test suites)**
+   - TypeScript: **0 errors (`npx tsc --noEmit`)**
+   - ESLint: **0 errors, 0 warnings (`npm run lint`)**
+   - Next.js Production Build: **18 routes successfully generated (`npm run build`)**
+   - Live HTTP test: **Seluruh 18 route menghasilkan status 200 OK**
+
+### 13.2 Matriks CRUD Entitas Aplikasi
+| Entitas | Create | Read | Update | Delete / Archive | Keterangan & Integritas |
+|---|---|---|---|---|---|
+| **Produk & Model** | Ya | Ya | Ya | Ya (Archive jika dipakai transaksi) | Pemisahan parent-child, BOM live HPP preview, integrasi ke order form. |
+| **Bahan Baku** | Ya | Ya | Ya | Ya | Proteksi integritas bila stok tercatat; mutasi stok atomik. |
+| **Mutasi Stok** | Ya | Ya | - | - | Audit trail permanen (IN/OUT/ADJUSTMENT/AUTO_ORDER). |
+| **Aset Tetap** | Ya | Ya | Ya | Ya | Terhubung dengan daya printer, depresiasi, dan kewajiban payables. |
+| **Transaksi Modal** | Ya | Ya | - | - | Rekonsiliasi modal awal Rp 11.440.748 (23 item historis). |
+| **Kewajiban & Cicilan** | Ya | Ya | Ya | - | Jadwal Anycubic Kobra X (3 bulan @ Rp 1.957.600, UNPAID). |
+| **Pembayaran Cicilan** | Ya | Ya | - | - | Arus kas pendanaan keluar (*Financing Outflow*). |
+| **Pesanan & Pelanggan**| Ya | Ya | Ya | Ya (Cancel/Void) | Snapshot HPP & harga jual permanen saat pesanan dibuat. |
+| **Pembayaran Pesanan** | Ya | Ya | - | - | Termin DP & pelunasan kas masuk real-time. |
+| **Beban & Pengeluaran** | Ya | Ya | Ya | Ya | Kategori dinamis, klasifikasi operasional vs non-operasional. |
+| **Pengaturan Bisnis** | Ya | Ya | Ya | - | Markup vs margin target, tarif Shopee 8%+4%, asumsi biaya. |
+
+### 13.3 Rekapitulasi Status Akhir
+Seluruh kebutuhan pada *Revision & Feature Completion Master Execution Prompt* telah diselesaikan secara tuntas dan telah divalidasi dengan standar pengujian tertinggi.
+
 

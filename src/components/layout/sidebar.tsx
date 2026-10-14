@@ -13,6 +13,8 @@ import {
   FileSpreadsheet,
   Printer,
   Calculator,
+  HandCoins,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,22 +25,28 @@ const navigationItems = [
     icon: LayoutDashboard,
   },
   {
-    name: "Produk & HPP",
+    name: "Produk & Model",
     href: "/products",
     icon: Box,
-    badge: "4 Model",
+    badge: "Katalog",
   },
   {
     name: "Pesanan (Orders)",
     href: "/orders",
     icon: ShoppingCart,
-    badge: "9 Transaksi",
+    badge: "Omnichannel",
   },
   {
     name: "Piutang Usaha",
     href: "/orders/receivables",
     icon: CreditCard,
     badge: "Rp 655k",
+  },
+  {
+    name: "Utang & Cicilan",
+    href: "/payables",
+    icon: HandCoins,
+    badge: "Anycubic",
   },
   {
     name: "Bahan & Stok",
@@ -56,15 +64,20 @@ const navigationItems = [
     icon: Receipt,
   },
   {
-    name: "Kalkulator HPP & BEP",
+    name: "Kalkulator HPP",
     href: "/calculator",
     icon: Calculator,
-    badge: "Engine",
+    badge: "Dual-Mode",
   },
   {
     name: "Laporan & BEP",
     href: "/reports",
     icon: FileSpreadsheet,
+  },
+  {
+    name: "Pengaturan Bisnis",
+    href: "/settings",
+    icon: Settings,
   },
 ];
 
@@ -89,7 +102,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       {/* Sidebar Container */}
       <aside
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-200/80 bg-white/95 backdrop-blur-md transition-transform duration-200 ease-in-out dark:border-zinc-800/80 dark:bg-zinc-950/95 lg:static lg:translate-x-0",
+          "fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-200/80 bg-white/95 backdrop-blur-md transition-transform duration-200 ease-in-out dark:border-zinc-800/80 dark:bg-zinc-950/95 lg:static lg:translate-x-0 shrink-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -116,10 +129,18 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           <nav className="space-y-1">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+
+              let isActive = false;
+              if (item.href === "/") {
+                isActive = pathname === "/";
+              } else if (item.href === "/orders") {
+                // Active for /orders, /orders/new, /orders/[id], but NOT /orders/receivables
+                isActive = pathname.startsWith("/orders") && !pathname.startsWith("/orders/receivables");
+              } else if (item.href === "/reports") {
+                isActive = pathname.startsWith("/reports");
+              } else {
+                isActive = pathname.startsWith(item.href);
+              }
 
               return (
                 <Link

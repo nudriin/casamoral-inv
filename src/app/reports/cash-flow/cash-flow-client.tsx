@@ -17,6 +17,7 @@ import {
   FileSpreadsheet,
   ShieldCheck,
 } from "lucide-react";
+import { FinancialIndicatorInfo, FinancialGlossaryModalButton } from "@/components/financial-indicator-guide";
 
 interface CashFlowClientProps {
   statement: CashFlowStatement;
@@ -73,6 +74,7 @@ export function CashFlowClient({ statement }: CashFlowClientProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <FinancialGlossaryModalButton />
           <Button
             onClick={handleExportCSV}
             size="sm"
@@ -89,7 +91,10 @@ export function CashFlowClient({ statement }: CashFlowClientProps) {
         <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
-              <span>Kas Masuk Pelanggan</span>
+              <span className="flex items-center gap-1.5">
+                <span>Kas Masuk Pelanggan</span>
+                <FinancialIndicatorInfo indicatorKey="arus_kas_masuk" />
+              </span>
               <ArrowDownRight className="w-4 h-4 text-emerald-500" />
             </CardTitle>
           </CardHeader>
@@ -106,7 +111,10 @@ export function CashFlowClient({ statement }: CashFlowClientProps) {
         <Card className="border-l-4 border-l-rose-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
-              <span>Pengeluaran Kas Operasi</span>
+              <span className="flex items-center gap-1.5">
+                <span>Pengeluaran Kas Operasi</span>
+                <FinancialIndicatorInfo indicatorKey="arus_kas_keluar" />
+              </span>
               <ArrowUpRight className="w-4 h-4 text-rose-500" />
             </CardTitle>
           </CardHeader>
@@ -123,7 +131,10 @@ export function CashFlowClient({ statement }: CashFlowClientProps) {
         <Card className="border-l-4 border-l-amber-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
-              <span>Modal Awal Disetor</span>
+              <span className="flex items-center gap-1.5">
+                <span>Modal Awal Disetor</span>
+                <FinancialIndicatorInfo indicatorKey="modal_usaha" />
+              </span>
               <Wallet className="w-4 h-4 text-amber-500" />
             </CardTitle>
           </CardHeader>

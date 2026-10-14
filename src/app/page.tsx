@@ -10,7 +10,6 @@ import {
   FileSpreadsheet,
   Target,
 } from "lucide-react";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import { formatRupiah } from "@/lib/utils";
 import { getOrders } from "@/lib/services/orders-service";
 import { getExecutiveDashboardMetrics } from "@/lib/services/reports-service";
 import { INITIAL_PRODUCTS } from "@/lib/data/initial-data";
+import { FinancialIndicatorInfo, FinancialGlossaryModalButton } from "@/components/financial-indicator-guide";
 
 export default async function DashboardPage() {
   const [dash, orders] = await Promise.all([
@@ -28,11 +28,7 @@ export default async function DashboardPage() {
   const recentOrders = orders.slice(0, 5);
 
   return (
-    <DashboardShell
-      title="Ringkasan Eksekutif & Operasional"
-      subtitle="Monitoring Finansial, Produksi, dan Inventaris Studio Casa Moral"
-    >
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Sprint 6 System Completion Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 dark:border-amber-500/20">
           <div className="flex items-start gap-3">
@@ -42,16 +38,17 @@ export default async function DashboardPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-                  Sistem Akuntansi & Pelaporan Sprint 6 Aktif
+                  Sistem Akuntansi & Manajemen Casa Moral
                 </span>
                 <Badge variant="accent">Production Ready</Badge>
               </div>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-                Laba Rugi, Arus Kas Metode Langsung, Analitik Produk per SKU, dan Ekspor Spreadsheet telah terintegrasi dengan data riil.
+                Laba Rugi, Arus Kas Metode Langsung, Analitik Produk, Utang Cicilan, dan Ekspor Spreadsheet telah terintegrasi.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <FinancialGlossaryModalButton />
             <Link href="/reports">
               <Button size="sm" variant="accent" className="text-xs gap-1">
                 <FileSpreadsheet className="w-3.5 h-3.5" /> Pusat Laporan
@@ -70,8 +67,9 @@ export default async function DashboardPage() {
           {/* KPI 1: Total Omzet Pesanan */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Total Omzet Penjualan
+              <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                <span>Total Omzet Penjualan</span>
+                <FinancialIndicatorInfo indicatorKey="pendapatan_kotor" />
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </CardHeader>
@@ -88,8 +86,9 @@ export default async function DashboardPage() {
           {/* KPI 2: Kas Riil Diterima */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Kas Riil Diterima
+              <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                <span>Kas Riil Diterima</span>
+                <FinancialIndicatorInfo indicatorKey="arus_kas_masuk" />
               </CardTitle>
               <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </CardHeader>
@@ -106,8 +105,9 @@ export default async function DashboardPage() {
           {/* KPI 3: Piutang Pelanggan */}
           <Card className="border-amber-200/80 bg-amber-50/20 dark:border-amber-900/40 dark:bg-amber-950/10">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                Piutang Usaha Berjalan
+              <CardTitle className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <span>Piutang Usaha Berjalan</span>
+                <FinancialIndicatorInfo indicatorKey="piutang_usaha" />
               </CardTitle>
               <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </CardHeader>
@@ -129,8 +129,9 @@ export default async function DashboardPage() {
           {/* KPI 4: Laba Kotor (Gross Profit) */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Laba Kotor (Gross Profit)
+              <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                <span>Laba Kotor (Gross Profit)</span>
+                <FinancialIndicatorInfo indicatorKey="laba_kotor" />
               </CardTitle>
               <Coins className="h-4 w-4 text-amber-500" />
             </CardHeader>
@@ -152,7 +153,8 @@ export default async function DashboardPage() {
               <div>
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Target className="w-4 h-4 text-amber-500" />
-                  Target Break-Even Point (BEP) Bulanan Studio
+                  <span>Target Break-Even Point (BEP) Bulanan Studio</span>
+                  <FinancialIndicatorInfo indicatorKey="bep" />
                 </CardTitle>
                 <CardDescription className="text-xs text-zinc-500">
                   Beban Tetap Bulanan: <strong>{formatRupiah(dash.bepTracking.monthlyFixedOverhead)}</strong> (Sewa tempat, Internet/WiFi, Amortisasi)
@@ -364,6 +366,5 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardShell>
   );
 }

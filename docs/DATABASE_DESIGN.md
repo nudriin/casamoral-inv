@@ -190,9 +190,59 @@ erDiagram
 
 ---
 
-## 3. Row Level Security (RLS) Strategy
+## 3. Skema Revisi & Modul Baru (Migration `20261015000002_revisions_and_payables.sql`)
 
-Seluruh tabel PostgreSQL wajib mengaktifkan `ROW LEVEL SECURITY`:
+### 3.1 Ekstensi Tabel `products`
+Mendukung pemisahan antara Produk Induk (misal: Lampu Ambient, Dekorasi 3D, Aksesori, Custom) dengan Model/Varian:
+- `parent_id`: UUID REFERENCES products(id) ON DELETE SET NULL
+- `product_type`: TEXT NOT NULL DEFAULT 'STANDARD' CHECK (product_type IN ('STANDARD', 'MODEL_VARIANT', 'CUSTOM', 'PURCHASED'))
+- `color_variants`: JSONB DEFAULT '[]'::jsonb
+- `custom_attributes`: JSONB DEFAULT '{}'::jsonb
+- `pricing_source`: TEXT NOT NULL DEFAULT 'INDIVIDUAL' CHECK (pricing_source IN ('GLOBAL', 'CATEGORY', 'INDIVIDUAL'))
+
+### 3.2 Tabel `business_settings`
+Menyimpan konfigurasi bisnis persisten per pengguna:
+- `id`: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- `key`: TEXT NOT NULL UNIQUE (e.g. `marketplace_fees`, `global_pricing`, `production_assumptions`)
+- `value`: JSONB NOT NULL
+- `description`: TEXT
+- `updated_by`: UUID REFERENCES auth.users(id)
+- `updated_at`: TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+### 3.3 Tabel `payables` (Utang Usaha & Cicilan Pembiayaan)
+- `id`: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- `title`: TEXT NOT NULL
+- `creditor_name`: TEXT NOT NULL (e.g. 'Shopee PayLater', 'Supplier Filamen')
+- `payable_type`: TEXT NOT NULL CHECK (payable_type IN ('ASSET_PURCHASE', 'OPERATIONAL_DEBT', 'RAW_MATERIAL', 'OTHER'))
+- `total_amount`: NUMERIC(15, 2) NOT NULL CHECK (total_amount > 0)
+- `paid_amount`: NUMERIC(15, 2) NOT NULL DEFAULT 0 CHECK (paid_amount >= 0)
+- `remaining_amount`: NUMERIC(15, 2) NOT NULL CHECK (remaining_amount >= 0)
+- `start_date`: DATE NOT NULL
+- `due_date`: DATE NOT NULL
+- `status`: TEXT NOT NULL DEFAULT 'UNPAID' CHECK (status IN ('UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'))
+- `asset_id`: UUID REFERENCES assets(id) ON DELETE SET NULL
+- `notes`: TEXT
+- `created_at`: TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+### 3.4 Tabel `payable_installments` (Rincian Angsuran Terjadwal)
+- `id`: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- `payable_id`: UUID NOT NULL REFERENCES payables(id) ON DELETE CASCADE
+- `installment_number`: INTEGER NOT NULL
+- `due_date`: DATE NOT NULL
+- `amount`: NUMERIC(15, 2) NOT NULL CHECK (amount > 0)
+- `paid_amount`: NUMERIC(15, 2) NOT NULL DEFAULT 0 CHECK (paid_amount >= 0)
+- `status`: TEXT NOT NULL DEFAULT 'UNPAID' CHECK (status IN ('UNPAID', 'PAID', 'OVERDUE', 'PARTIALLY_PAID'))
+- `paid_date`: DATE
+- `payment_method`: TEXT
+- `reference_number`: TEXT
+- `notes`: TEXT
+- `created_at`: TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
+---
+
+## 4. Row Level Security (RLS) Strategy
+
+Seluruh tabel PostgreSQL mengaktifkan `ROW LEVEL SECURITY`:
 ```sql
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -202,8 +252,12 @@ ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payables ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payable_installments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_settings ENABLE ROW LEVEL SECURITY;
 ```
 
 Kebijakan akses berbasis user terotentikasi:
 - `SELECT / INSERT / UPDATE / DELETE`: Diberikan hanya kepada pengguna yang telah login (`auth.role() = 'authenticated'`).
 - Akses anonim (`anon`) dilarang membaca atau mengubah data operasional bisnis secara langsung.
+

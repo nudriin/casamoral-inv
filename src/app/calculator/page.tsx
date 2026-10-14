@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -20,6 +19,7 @@ import {
 } from "@/lib/financial/pricing-calculator";
 import { calculateBEP } from "@/lib/financial/bep-calculator";
 import { Sparkles, Sliders, Target, Store } from "lucide-react";
+import { FinancialIndicatorInfo, FinancialGlossaryModalButton } from "@/components/financial-indicator-guide";
 
 export default function CalculatorPage() {
   // Mode selection
@@ -125,41 +125,41 @@ export default function CalculatorPage() {
   });
 
   return (
-    <DashboardShell
-      title="Kalkulator Finansial & Simulator BEP"
-      subtitle="Engine kalkulasi HPP dual-mode, konverter Markup vs Margin, potongan platform, dan analisis titik impas"
-    >
-      <div className="space-y-6">
-        {/* Mode Selector Tabs */}
-        <div className="flex items-center gap-2 p-1.5 rounded-xl bg-zinc-200/80 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800 w-fit">
-          <button
-            onClick={() => setMode("STANDARD")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              mode === "STANDARD"
-                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
-            }`}
-          >
-            Mode Standard (Casa Moral 1.2x)
-          </button>
-          <button
-            onClick={() => setMode("ADVANCED")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              mode === "ADVANCED"
-                ? "bg-amber-600 text-white shadow-sm"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5" /> Mode Advanced (ELS Studio Slicing)
-          </button>
+    <div className="space-y-6">
+        {/* Mode Selector Tabs & Glossary */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 p-1.5 rounded-xl bg-zinc-200/80 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800 w-fit">
+            <button
+              onClick={() => setMode("STANDARD")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                mode === "STANDARD"
+                  ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+              }`}
+            >
+              Mode Standard (Casa Moral 1.2x)
+            </button>
+            <button
+              onClick={() => setMode("ADVANCED")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                mode === "ADVANCED"
+                  ? "bg-amber-600 text-white shadow-sm"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Mode Advanced (ELS Studio Slicing)
+            </button>
+          </div>
+          <FinancialGlossaryModalButton />
         </div>
 
         {/* Top Highlight Cards: Result Summary */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-transparent">
             <CardHeader className="pb-1.5">
-              <CardTitle className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                Total HPP Produksi
+              <CardTitle className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center justify-between">
+                <span>Total HPP Produksi</span>
+                <FinancialIndicatorInfo indicatorKey="hpp" />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -174,8 +174,9 @@ export default function CalculatorPage() {
 
           <Card>
             <CardHeader className="pb-1.5">
-              <CardTitle className="text-xs font-medium text-zinc-500">
-                Harga Jual Rekomendasi
+              <CardTitle className="text-xs font-medium text-zinc-500 flex items-center justify-between">
+                <span>Harga Jual Rekomendasi</span>
+                <FinancialIndicatorInfo indicatorKey={pricingMethod === "MARKUP" ? "markup" : "margin"} />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -191,8 +192,9 @@ export default function CalculatorPage() {
 
           <Card>
             <CardHeader className="pb-1.5">
-              <CardTitle className="text-xs font-medium text-zinc-500">
-                Laba Kotor Riil / Unit
+              <CardTitle className="text-xs font-medium text-zinc-500 flex items-center justify-between">
+                <span>Laba Kotor Riil / Unit</span>
+                <FinancialIndicatorInfo indicatorKey="laba_kotor" />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -207,8 +209,9 @@ export default function CalculatorPage() {
 
           <Card className="border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/10">
             <CardHeader className="pb-1.5">
-              <CardTitle className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                Target BEP (Titik Impas)
+              <CardTitle className="text-xs font-medium text-emerald-800 dark:text-emerald-400 flex items-center justify-between">
+                <span>Target BEP (Titik Impas)</span>
+                <FinancialIndicatorInfo indicatorKey="bep" />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -499,7 +502,10 @@ export default function CalculatorPage() {
             {/* Results Grid */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs">
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-zinc-500 block mb-1">Margin Kontribusi / Unit</span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-zinc-500">Margin Kontribusi / Unit</span>
+                  <FinancialIndicatorInfo indicatorKey="margin_kontribusi" />
+                </div>
                 <span className="text-base font-bold text-zinc-900 dark:text-zinc-100">
                   {formatRupiah(bepResult.unitContributionMargin)}
                 </span>
@@ -509,7 +515,10 @@ export default function CalculatorPage() {
               </div>
 
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-zinc-500 block mb-1">BEP Unit per Bulan</span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-zinc-500">BEP Unit per Bulan</span>
+                  <FinancialIndicatorInfo indicatorKey="bep" />
+                </div>
                 <span className="text-base font-bold text-amber-600 dark:text-amber-400">
                   {bepResult.bepUnitsPerMonth} Unit
                 </span>
@@ -519,7 +528,10 @@ export default function CalculatorPage() {
               </div>
 
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-zinc-500 block mb-1">Proyeksi Laba Bersih Bulanan</span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-zinc-500">Proyeksi Laba Bersih</span>
+                  <FinancialIndicatorInfo indicatorKey="laba_operasional" />
+                </div>
                 <span
                   className={`text-base font-bold ${
                     bepResult.estimatedNetProfit > 0 ? "text-emerald-600" : "text-red-500"
@@ -533,7 +545,10 @@ export default function CalculatorPage() {
               </div>
 
               <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                <span className="text-zinc-500 block mb-1">Estimasi Balik Modal (ROI)</span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-zinc-500">Estimasi Balik Modal (ROI)</span>
+                  <FinancialIndicatorInfo indicatorKey="payback_period" />
+                </div>
                 <span className="text-base font-bold text-zinc-900 dark:text-zinc-100">
                   {bepResult.paybackPeriodMonths ? `${bepResult.paybackPeriodMonths} Bulan` : "Belum Impas"}
                 </span>
@@ -545,6 +560,5 @@ export default function CalculatorPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardShell>
   );
 }

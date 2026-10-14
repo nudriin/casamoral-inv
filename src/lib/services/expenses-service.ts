@@ -207,6 +207,56 @@ export async function getExpensesSummary(): Promise<ExpensesSummary> {
 }
 
 /**
+ * Create a new expense category
+ */
+export async function createExpenseCategory(category: { name: string; is_fixed_cost?: boolean; description?: string }): Promise<ExpenseCategory> {
+  const { isConfigured } = getEnvStatus();
+
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      const { data, error } = await supabase.from("expense_categories").insert([category]).select().single();
+      if (!error && data) {
+        return data as ExpenseCategory;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  const newCat: ExpenseCategory = {
+    id: `cat-${Date.now()}`,
+    name: category.name,
+    is_fixed_cost: category.is_fixed_cost ?? true,
+    description: category.description || null,
+    created_at: new Date().toISOString(),
+  };
+  memoryCategories.push(newCat);
+  return newCat;
+}
+
+/**
+ * Delete an expense
+ */
+export async function deleteExpense(id: string): Promise<boolean> {
+  const { isConfigured } = getEnvStatus();
+
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      const { error } = await supabase.from("expenses").delete().eq("id", id);
+      if (!error) return true;
+    } catch {
+      // Fallback
+    }
+  }
+
+  const initialLen = memoryExpenses.length;
+  memoryExpenses = memoryExpenses.filter((e) => e.id !== id);
+  return memoryExpenses.length < initialLen;
+}
+
+/**
  * Reset memory expenses (used for test isolation)
  */
 export function resetMemoryExpenses(): void {
