@@ -53,7 +53,9 @@ export function calculatePriceFromMargin(hpp: number, marginPercent: number): nu
 }
 
 export interface MarketplaceFeeOptions {
-  shopeeAdminRate?: number;     // e.g. 0.08 for 8%
+  shopeeAdminRate?: number;     // e.g. 0.095 for 9.5% (or 0.08)
+  orderProcessingFee?: number;  // e.g. Rp 1.250 flat per order
+  pph22Rate?: number;           // e.g. 0.005 for 0.5% PPh 22
   freeShippingXtraRate?: number;// e.g. 0.04 for 4%
   freeShippingMaxCap?: number;  // e.g. Rp 10.000 max cap
   includeShippingXtra?: boolean;// Y/N toggle
@@ -66,6 +68,8 @@ export interface PricingAnalysisResult {
   markupPercent: number;
   marginPercent: number;
   shopeeAdminFee: number;
+  orderProcessingFee: number;
+  pph22Fee: number;
   shippingXtraFee: number;
   totalMarketplaceFees: number;
   netRealizedPrice: number;
@@ -85,6 +89,8 @@ export function analyzePricing(
   const hppDec = new Decimal(hpp);
 
   const adminRate = new Decimal(options.shopeeAdminRate ?? 0.08);
+  const processFee = new Decimal(options.orderProcessingFee ?? 0);
+  const pph22Rate = new Decimal(options.pph22Rate ?? 0);
   const shippingRate = new Decimal(options.freeShippingXtraRate ?? 0.04);
   const shippingCap = new Decimal(options.freeShippingMaxCap ?? 10000);
   const includeShipping = options.includeShippingXtra ?? true;
@@ -101,6 +107,8 @@ export function analyzePricing(
 
   // Marketplace deductions
   const shopeeAdminFee = priceDec.times(adminRate).toDecimalPlaces(2);
+  const orderProcessingFee = processFee;
+  const pph22Fee = priceDec.times(pph22Rate).toDecimalPlaces(2);
   let shippingXtraFee = new Decimal(0);
 
   if (includeShipping) {
@@ -108,7 +116,10 @@ export function analyzePricing(
     shippingXtraFee = Decimal.min(rawShippingFee, shippingCap).toDecimalPlaces(2);
   }
 
-  const totalMarketplaceFees = shopeeAdminFee.plus(shippingXtraFee);
+  const totalMarketplaceFees = shopeeAdminFee
+    .plus(orderProcessingFee)
+    .plus(pph22Fee)
+    .plus(shippingXtraFee);
   const netRealizedPrice = priceDec.minus(totalMarketplaceFees);
   const netGrossProfit = priceDec.minus(hppDec).minus(totalMarketplaceFees);
   const netMarginPercent = priceDec.isZero()
@@ -122,6 +133,8 @@ export function analyzePricing(
     markupPercent,
     marginPercent,
     shopeeAdminFee: shopeeAdminFee.toNumber(),
+    orderProcessingFee: orderProcessingFee.toNumber(),
+    pph22Fee: pph22Fee.toNumber(),
     shippingXtraFee: shippingXtraFee.toNumber(),
     totalMarketplaceFees: totalMarketplaceFees.toNumber(),
     netRealizedPrice: netRealizedPrice.toDecimalPlaces(2).toNumber(),

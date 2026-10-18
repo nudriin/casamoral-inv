@@ -250,7 +250,7 @@ export function PaymentFormClient({ order, initialPayments }: PaymentFormClientP
                   className="mt-1 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="TRANSFER">Transfer Bank (BCA / BRI / Mandiri)</option>
-                  <option value="CASH">Tunai / Cash (COD Sukamara)</option>
+                  <option value="CASH">Tunai / Cash</option>
                   <option value="QRIS">QRIS Standar</option>
                   <option value="SHOPEE_PAYOUT">Shopee Payout / Saldo Mitra</option>
                 </select>

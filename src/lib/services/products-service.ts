@@ -1,4 +1,4 @@
-import { INITIAL_PRODUCTS, ProductWithBOM } from "@/lib/data/initial-data";
+import { INITIAL_PRODUCTS, ProductWithBOM, BomPartItem, BomHardwareItem } from "@/lib/data/initial-data";
 import { Product, ProductCategory, ProductType, PricingSource, CalculationMode } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEnvStatus } from "@/lib/env";
@@ -39,6 +39,8 @@ export interface CreateProductPayload {
   pricing_source?: PricingSource;
   is_active?: boolean;
   bom?: {
+    parts?: BomPartItem[];
+    hardware?: BomHardwareItem[];
     shadeGram?: number;
     baseGram?: number;
     capGram?: number;
@@ -205,10 +207,40 @@ export async function createProduct(payload: CreateProductPayload): Promise<Prod
   const sku = payload.sku ? payload.sku.trim() : `CM-${Date.now().toString().slice(-6)}`;
 
   // Calculate HPP and recommended price using Decimal.js
-  const filamentCostDec = new Decimal(payload.bom?.filamentCost || 0);
-  const electricalCostDec = new Decimal(payload.bom?.electricalCost || 0);
-  const packagingCostDec = new Decimal(payload.bom?.packagingCost || 0);
-  const materialSubtotal = filamentCostDec.plus(electricalCostDec).plus(packagingCostDec);
+  const parts = payload.bom?.parts || [];
+  const hardware = payload.bom?.hardware || [];
+
+  let totalFilamentGram = payload.bom?.totalFilamentGram || 0;
+  if (parts.length > 0) {
+    totalFilamentGram = parts.reduce(
+      (sum, p) => sum + (Number(p.gram) || 0) * (Number(p.quantity) || 1),
+      0
+    );
+  } else if (!totalFilamentGram) {
+    totalFilamentGram =
+      (payload.bom?.shadeGram || 0) +
+      (payload.bom?.baseGram || 0) +
+      (payload.bom?.capGram || 0);
+  }
+
+  let filamentCost = payload.bom?.filamentCost;
+  if (filamentCost === undefined) {
+    filamentCost = new Decimal(totalFilamentGram).times(180).toNumber();
+  }
+
+  let totalHardwareCost = 0;
+  if (hardware.length > 0) {
+    totalHardwareCost = hardware.reduce(
+      (sum, h) => sum + (Number(h.cost) || 0) * (Number(h.quantity) || 1),
+      0
+    );
+  } else {
+    totalHardwareCost = (payload.bom?.electricalCost || 0) + (payload.bom?.packagingCost || 0);
+  }
+
+  const filamentCostDec = new Decimal(filamentCost);
+  const hardwareCostDec = new Decimal(totalHardwareCost);
+  const materialSubtotal = filamentCostDec.plus(hardwareCostDec);
 
   const overheadMultiplier = payload.standard_overhead_multiplier || 1.20;
   let calculatedHpp = payload.current_hpp || 0;
@@ -245,16 +277,15 @@ export async function createProduct(payload: CreateProductPayload): Promise<Prod
     created_at: nowIso,
     updated_at: nowIso,
     bom: {
+      parts: parts.length > 0 ? parts : undefined,
+      hardware: hardware.length > 0 ? hardware : undefined,
       shadeGram: payload.bom?.shadeGram || 0,
       baseGram: payload.bom?.baseGram || 0,
       capGram: payload.bom?.capGram || 0,
-      totalFilamentGram:
-        (payload.bom?.shadeGram || 0) +
-        (payload.bom?.baseGram || 0) +
-        (payload.bom?.capGram || 0),
+      totalFilamentGram,
       filamentCost: filamentCostDec.toNumber(),
-      electricalCost: electricalCostDec.toNumber(),
-      packagingCost: packagingCostDec.toNumber(),
+      electricalCost: payload.bom?.electricalCost !== undefined ? payload.bom.electricalCost : totalHardwareCost,
+      packagingCost: payload.bom?.packagingCost || 0,
       subtotalMaterial: materialSubtotal.toNumber(),
       overheadMultiplier,
     },
@@ -321,15 +352,45 @@ export async function updateProduct(
   };
 
   if (payload.bom) {
-    const filCost = payload.bom.filamentCost !== undefined ? payload.bom.filamentCost : existing.bom.filamentCost;
-    const elecCost = payload.bom.electricalCost !== undefined ? payload.bom.electricalCost : existing.bom.electricalCost;
-    const packCost = payload.bom.packagingCost !== undefined ? payload.bom.packagingCost : existing.bom.packagingCost;
-    const subtotal = new Decimal(filCost).plus(elecCost).plus(packCost).toNumber();
+    const updatedParts = payload.bom.parts !== undefined ? payload.bom.parts : existing.bom?.parts;
+    const updatedHardware = payload.bom.hardware !== undefined ? payload.bom.hardware : existing.bom?.hardware;
+
+    let totalFilamentGram = payload.bom.totalFilamentGram;
+    if (updatedParts && updatedParts.length > 0) {
+      totalFilamentGram = updatedParts.reduce(
+        (sum, p) => sum + (Number(p.gram) || 0) * (Number(p.quantity) || 1),
+        0
+      );
+    } else if (totalFilamentGram === undefined) {
+      totalFilamentGram = existing.bom.totalFilamentGram;
+    }
+
+    let filCost = payload.bom.filamentCost;
+    if (filCost === undefined) {
+      filCost = updatedParts && updatedParts.length > 0
+        ? new Decimal(totalFilamentGram).times(180).toNumber()
+        : existing.bom.filamentCost;
+    }
+
+    let totalHwCost = 0;
+    if (updatedHardware && updatedHardware.length > 0) {
+      totalHwCost = updatedHardware.reduce(
+        (sum, h) => sum + (Number(h.cost) || 0) * (Number(h.quantity) || 1),
+        0
+      );
+    } else {
+      totalHwCost =
+        (payload.bom.electricalCost !== undefined ? payload.bom.electricalCost : existing.bom.electricalCost) +
+        (payload.bom.packagingCost !== undefined ? payload.bom.packagingCost : existing.bom.packagingCost);
+    }
+
+    const subtotal = new Decimal(filCost).plus(totalHwCost).toNumber();
     const mult = payload.standard_overhead_multiplier || existing.standard_overhead_multiplier || 1.20;
 
+    bom.parts = updatedParts;
+    bom.hardware = updatedHardware;
+    bom.totalFilamentGram = totalFilamentGram;
     bom.filamentCost = filCost;
-    bom.electricalCost = elecCost;
-    bom.packagingCost = packCost;
     bom.subtotalMaterial = subtotal;
     bom.overheadMultiplier = mult;
 

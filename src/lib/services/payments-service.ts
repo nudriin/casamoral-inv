@@ -214,6 +214,27 @@ export async function getReceivablesSummary(): Promise<ReceivablesSummary> {
 }
 
 /**
+ * Delete all payments associated with an order (called during order deletion)
+ */
+export async function deletePaymentsByOrderId(orderId: string): Promise<number> {
+  const initialLen = memoryPayments.length;
+  memoryPayments = memoryPayments.filter((p) => p.order_id !== orderId);
+  const deletedCount = initialLen - memoryPayments.length;
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      await supabase.from("payments").delete().eq("order_id", orderId);
+    } catch {
+      // Fallback
+    }
+  }
+
+  return deletedCount;
+}
+
+/**
  * Reset memory payments (used for automated test cleanup)
  */
 export function resetMemoryPayments(): void {

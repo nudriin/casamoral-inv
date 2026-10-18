@@ -169,6 +169,17 @@ export interface Order {
   payment_status: PaymentStatus;
   paid_amount: number;
   notes?: string | null;
+  packaging_cost?: number;
+  raw_hpp?: number;
+  total_hpp?: number;
+  net_profit?: number;
+  packaging_items?: Array<{
+    material_id: string;
+    name: string;
+    quantity: number;
+    unit_cost: number;
+    unit_price: number;
+  }>;
   created_at: string;
   updated_at: string;
   customer?: Customer;

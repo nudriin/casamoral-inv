@@ -2,7 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Order, OrderStatus, PaymentStatus } from "@/types/database";
+import { useRouter } from "next/navigation";
+import { Order, OrderStatus, PaymentStatus, Product } from "@/types/database";
+import { ProductWithBOM } from "@/lib/data/initial-data";
 import { formatRupiah, formatDateIndo } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,10 +24,15 @@ import {
   MapPin,
   FileText,
   AlertCircle,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { EditOrderModal } from "@/components/orders/edit-order-modal";
+import { DeleteOrderModal } from "@/components/orders/delete-order-modal";
 
 interface OrderDetailClientProps {
   initialOrder: Order;
+  products?: ProductWithBOM[] | Product[];
 }
 
 const PRODUCTION_STEPS: { status: OrderStatus; label: string; icon: React.ElementType }[] = [
@@ -37,8 +44,11 @@ const PRODUCTION_STEPS: { status: OrderStatus; label: string; icon: React.Elemen
   { status: "COMPLETED", label: "Selesai", icon: CheckCircle2 },
 ];
 
-export function OrderDetailClient({ initialOrder }: OrderDetailClientProps) {
+export function OrderDetailClient({ initialOrder, products }: OrderDetailClientProps) {
+  const router = useRouter();
   const [order, setOrder] = useState<Order>(initialOrder);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -122,6 +132,23 @@ export function OrderDetailClient({ initialOrder }: OrderDetailClientProps) {
               Belum Lunas (Sisa: {formatRupiah(remainingReceivable)})
             </Badge>
           )}
+
+          <Button
+            onClick={() => setIsEditModalOpen(true)}
+            size="sm"
+            className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 cursor-pointer shadow-sm"
+          >
+            <Pencil className="w-3.5 h-3.5" /> Edit Transaksi
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40 text-xs gap-1.5 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Hapus Transaksi
+          </Button>
         </div>
       </div>
 
@@ -400,7 +427,7 @@ export function OrderDetailClient({ initialOrder }: OrderDetailClientProps) {
                     <MapPin className="w-3.5 h-3.5" /> Lokasi / Kota
                   </div>
                   <div className="font-medium text-zinc-800 dark:text-zinc-200">
-                    {order.customer?.city || "Sukamara, Kalimantan Tengah"}
+                    {order.customer?.city || "-"}
                   </div>
                 </div>
               </div>
@@ -432,25 +459,33 @@ export function OrderDetailClient({ initialOrder }: OrderDetailClientProps) {
             <CardContent className="p-4 space-y-3 text-xs">
               <div className="space-y-2">
                 <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
-                  <span>Total Omzet:</span>
+                  <span>Nilai Tagihan Invoice:</span>
                   <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">
                     {formatRupiah(order.total_amount)}
                   </span>
                 </div>
+                {order.platform_fee > 0 && (
+                  <div className="flex justify-between text-orange-600 dark:text-orange-400">
+                    <span>Potongan Fee Marketplace (Shopee):</span>
+                    <span className="font-mono">-{formatRupiah(order.platform_fee)}</span>
+                  </div>
+                )}
+                {order.platform_fee > 0 && (
+                  <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 p-1.5 rounded text-xs">
+                    <span>Omzet Bersih Diterima (Kas):</span>
+                    <span className="font-mono">
+                      {formatRupiah(order.total_amount - order.platform_fee)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
                   <span>Snapshot HPP Total:</span>
                   <span className="font-mono text-zinc-700 dark:text-zinc-300">
                     {formatRupiah(totalHppSnapshot)}
                   </span>
                 </div>
-                {order.platform_fee > 0 && (
-                  <div className="flex justify-between text-orange-600 dark:text-orange-400">
-                    <span>Biaya Platform (Shopee):</span>
-                    <span className="font-mono">-{formatRupiah(order.platform_fee)}</span>
-                  </div>
-                )}
                 <div className="border-t border-zinc-200 dark:border-zinc-800 pt-2 flex justify-between font-bold text-sm">
-                  <span>Laba Kotor (Gross Profit):</span>
+                  <span>Laba Bersih Riil:</span>
                   <span
                     className={`font-mono ${
                       grossProfit >= 0 ? "text-emerald-600" : "text-rose-600"
@@ -537,6 +572,29 @@ export function OrderDetailClient({ initialOrder }: OrderDetailClientProps) {
           </Card>
         </div>
       </div>
+
+      <EditOrderModal
+        order={order}
+        isOpen={isEditModalOpen}
+        availableProducts={products}
+        onClose={() => setIsEditModalOpen(false)}
+        onSaved={(updatedOrder) => {
+          setOrder(updatedOrder);
+          setSuccessMsg("Data transaksi berhasil diperbarui!");
+        }}
+        onDeleted={() => {
+          router.push("/orders");
+        }}
+      />
+
+      <DeleteOrderModal
+        order={order}
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onDeleted={() => {
+          router.push("/orders");
+        }}
+      />
     </div>
   );
 }

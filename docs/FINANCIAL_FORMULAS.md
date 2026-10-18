@@ -70,11 +70,29 @@ $$\text{Margin} = \frac{\text{Markup}}{1 + \text{Markup}} \quad \Longleftrightar
 
 ---
 
-### 2.3 Formula Potongan Platform Marketplace (Shopee)
+### 2.3 Formula Potongan Platform Marketplace (Shopee) & Omzet Riil Diterima Kas
 
-$$\text{Biaya Admin Shopee} = \text{Harga Jual} \times \text{Tarif Admin (misal 8\%)}$$
-$$\text{Biaya Gratis Ongkir Xtra} = \min(\text{Harga Jual} \times \text{Tarif Ongkir Xtra (misal 4\%)}, 10.000)$$
-$$\text{Laba Kotor Riil per Unit} = \text{Harga Jual} - \text{HPP} - \text{Biaya Admin Shopee} - \text{Biaya Gratis Ongkir Xtra}$$
+#### A. Struktur Biaya Marketplace Presisi Toko Casa Moral:
+1. **Biaya Administrasi Shopee**: $9.5\%$ dari harga jual produk
+2. **Biaya Proses Pesanan**: $\text{Rp } 1.250$ (flat per order)
+3. **Pajak Penghasilan (PPh 22 Marketplace)**: $0.5\%$ dari harga jual produk
+
+$$\text{Potongan Platform Shopee} = (\text{Harga Jual} \times 9.5\%) + 1.250 + (\text{Harga Jual} \times 0.5\%)$$
+
+#### B. Perlakuan Akuntansi Omzet (Cash Inflow vs Gross Invoice):
+Karena potongan Shopee langsung dipotong di awal sebelum dana masuk ke Saldo Penjual/rekening kas pemilik toko, maka aplikasi mencatat:
+$$\text{Omzet Riil Diterima Kas} = \text{Harga Jual Tagihan} - \text{Potongan Platform Shopee} - \text{Diskon}$$
+$$\text{Laba Bersih Riil} = \text{Omzet Riil Diterima Kas} - \text{Total HPP (Bahan + Kemasan)}$$
+
+*Contoh Kasus Model Ollie (Rp 130.000 via Shopee)*:
+- Harga Jual Tagihan: $\text{Rp } 130.000$
+- Biaya Admin ($9.5\%$): $\text{Rp } 12.350$
+- Biaya Proses: $\text{Rp } 1.250$
+- PPh 22 ($0.5\%$): $\text{Rp } 650$
+- **Total Potongan Platform**: $\text{Rp } 14.250$
+- **Omzet Riil Diterima Kas**: $130.000 - 14.250 = \mathbf{\text{Rp } 115.750}$
+- Total Modal HPP: $\text{Rp } 89.705$
+- **Laba Bersih Riil**: $115.750 - 89.705 = \mathbf{\text{Rp } 26.045}$ (Margin: $22.5\%$)
 
 ---
 

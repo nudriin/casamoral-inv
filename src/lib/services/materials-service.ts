@@ -402,6 +402,45 @@ export async function deleteMaterial(id: string): Promise<boolean> {
   return true;
 }
 
+export interface SelectedPackagingItem {
+  material_id: string;
+  name: string;
+  quantity: number;
+  unit_cost: number;
+  unit_price: number;
+}
+
+/**
+ * Fetch all materials categorized under packaging
+ */
+export async function getPackagingMaterials(): Promise<Material[]> {
+  const materials = await getMaterials();
+  return materials.filter((m) => m.category === "packaging");
+}
+
+/**
+ * Deducts selected packaging materials for a POS order and logs stock movements
+ */
+export async function deductPackagingStockForOrder(
+  orderId: string,
+  orderNumber: string,
+  packagingItems: SelectedPackagingItem[]
+): Promise<StockMovement[]> {
+  const movements: StockMovement[] = [];
+  for (const pkg of packagingItems) {
+    if (!pkg.material_id || pkg.quantity <= 0) continue;
+    const mov = await recordStockMovement({
+      material_id: pkg.material_id,
+      movement_type: "PRODUCTION_USAGE",
+      quantity: -pkg.quantity,
+      reference_id: orderId,
+      notes: `Penjualan Kasir POS (${orderNumber}): Pengurangan ${pkg.quantity}x ${pkg.name}`,
+    });
+    movements.push(mov);
+  }
+  return movements;
+}
+
 /**
  * Reset memory materials and movements (for automated testing isolation)
  */
@@ -409,4 +448,5 @@ export function resetMemoryMaterials(): void {
   memoryMaterials = JSON.parse(JSON.stringify(INITIAL_MATERIALS));
   memoryMovements = JSON.parse(JSON.stringify(INITIAL_STOCK_MOVEMENTS));
 }
+
 

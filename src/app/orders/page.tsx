@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { getOrders, getOrderSummaryStats } from "@/lib/services/orders-service";
+import { getProducts } from "@/lib/services/products-service";
 import { formatRupiah } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,10 @@ export const metadata = {
 };
 
 export default async function OrdersPage() {
-  const [orders, stats] = await Promise.all([
+  const [orders, stats, products] = await Promise.all([
     getOrders(),
     getOrderSummaryStats(),
+    getProducts(false),
   ]);
 
   return (
@@ -139,7 +141,7 @@ export default async function OrdersPage() {
       </div>
 
       {/* Main Orders Table & Client Filter */}
-      <OrderListClient initialOrders={orders} />
+      <OrderListClient initialOrders={orders} products={products} />
     </div>
   );
 }

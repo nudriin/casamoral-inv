@@ -5,14 +5,18 @@ import {
   createOrder,
   updateOrderStatus,
   updateOrderPayment,
+  updateOrder,
   getOrderSummaryStats,
+  deleteOrder,
   resetMemoryOrders,
   isValidStatusTransition,
 } from "../src/lib/services/orders-service";
+import { getPayments, createPayment, resetMemoryPayments } from "../src/lib/services/payments-service";
 
 describe("Sprint 4 — Order and Production Management Tests", () => {
   beforeEach(() => {
     resetMemoryOrders();
+    resetMemoryPayments();
   });
 
   describe("1. Historical Orders Integrity (Sheet: Orderan Casa Moral.xlsx)", () => {
@@ -247,6 +251,188 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
       const searched = await getOrders({ search: "Acil Ely" });
       expect(searched.length).toBe(1);
       expect(searched[0].customer?.name).toBe("Acil Ely");
+    });
+  });
+
+  describe("5. Comprehensive Transaction Editing (updateOrder)", () => {
+    it("should allow editing customer, channel, model, add-on, status, and payment", async () => {
+      // 1. Create a initial order
+      const initial = await createOrder({
+        customer_name: "Budi Santoso",
+        customer_city: "Sukamara",
+        channel: "Direct",
+        items: [
+          {
+            product_id: "prod-02",
+            quantity: 1,
+            unit_price: 130000,
+          },
+        ],
+      });
+
+      expect(initial.customer?.name).toBe("Budi Santoso");
+      expect(initial.status).toBe("PENDING");
+      expect(initial.total_amount).toBe(130000);
+      expect(initial.channel).toBe("Direct");
+
+      // 2. Comprehensive edit: change customer, city, add add-on, change channel to Shopee, set status to COMPLETED, set payment to PAID
+      const edited = await updateOrder({
+        order_id: initial.id,
+        customer_name: "Budi Santoso (Updated)",
+        customer_city: "Palangka Raya",
+        channel: "Shopee",
+        status: "COMPLETED",
+        items: [
+          {
+            product_id: "prod-02",
+            quantity: 1,
+            unit_price: 130000,
+            color_details: "Base Hitam + Shade Emas",
+            add_on_name: "Figur Khusus",
+            add_on_price: 25000,
+          },
+        ],
+        shipping_cost: 10000,
+        discount_amount: 5000,
+        paid_amount: 160000,
+        payment_status: "PAID",
+        notes: "Pengiriman cepat via J&T",
+      });
+
+      // Verify customer updates
+      expect(edited.customer?.name).toBe("Budi Santoso (Updated)");
+      expect(edited.customer?.city).toBe("Palangka Raya");
+
+      // Verify channel and status updates
+      expect(edited.channel).toBe("Shopee");
+      expect(edited.status).toBe("COMPLETED");
+
+      // Verify financial recalculations:
+      // Subtotal = 130.000 + 25.000 = 155.000
+      // Total amount = 155.000 + 10.000 (ongkir) - 5.000 (diskon) = 160.000
+      expect(edited.subtotal_amount).toBe(130000);
+      expect(edited.add_on_amount).toBe(25000);
+      expect(edited.shipping_cost).toBe(10000);
+      expect(edited.discount_amount).toBe(5000);
+      expect(edited.total_amount).toBe(160000);
+
+      // Verify item updates
+      expect(edited.items?.length).toBe(1);
+      expect(edited.items?.[0].color_details).toBe("Base Hitam + Shade Emas");
+      expect(edited.items?.[0].add_on_name).toBe("Figur Khusus");
+      expect(edited.items?.[0].add_on_price).toBe(25000);
+
+      // Verify payment updates
+      expect(edited.payment_status).toBe("PAID");
+      expect(edited.paid_amount).toBe(160000);
+
+      // Verify Shopee platform fee calculation on Rp 160.000:
+      // 9.5% (15.200) + 1.250 + 0.5% (800) = 17.250
+      expect(edited.platform_fee).toBe(17250);
+
+      // Verify notes
+      expect(edited.notes).toBe("Pengiriman cepat via J&T");
+    });
+
+    it("should allow creating an order for Lumi without Cap and with custom city Palangka Raya", async () => {
+      const lumiOrder = await createOrder({
+        customer_name: "Rian Palangka",
+        customer_city: "Palangka Raya",
+        channel: "Direct",
+        items: [
+          {
+            product_id: "prod-01", // Lumi
+            quantity: 1,
+            unit_price: 130000,
+            color_details: "Base Hitam + Shade Putih", // No cap
+          },
+        ],
+        payment_status: "PAID",
+        paid_amount: 130000,
+      });
+
+      expect(lumiOrder.customer?.city).toBe("Palangka Raya");
+      expect(lumiOrder.channel).toBe("Direct");
+      expect(lumiOrder.items?.[0].color_details).not.toContain("Cap");
+      expect(lumiOrder.platform_fee).toBe(0); // Direct channel fee is 0
+    });
+  });
+
+  describe("7. Transaction Deletion & Financial Recalculation", () => {
+    it("should delete an order and automatically recalculate total revenue, cash, and receivables", async () => {
+      // Baseline before creating test order
+      const initialStats = await getOrderSummaryStats();
+      const initialOrders = await getOrders();
+      expect(initialStats.totalOrders).toBe(9);
+      expect(initialStats.totalRevenue).toBe(945000);
+      expect(initialStats.totalPaid).toBe(290000);
+      expect(initialStats.totalReceivables).toBe(655000);
+
+      // Create a new order: Rp 150.000 with DP Rp 50.000 (Piutang: Rp 100.000)
+      const order = await createOrder({
+        customer_name: "Pelanggan Tes Hapus",
+        customer_city: "Jakarta",
+        channel: "Direct",
+        items: [
+          {
+            product_id: "prod-02",
+            quantity: 1,
+            unit_price: 150000,
+            color_details: "Base Hitam + Shade Putih + Cap Oren",
+          },
+        ],
+        payment_status: "PARTIALLY_PAID",
+        paid_amount: 50000,
+      });
+
+      // Verify stats increased
+      const afterCreateStats = await getOrderSummaryStats();
+      expect(afterCreateStats.totalOrders).toBe(10);
+      expect(afterCreateStats.totalRevenue).toBe(945000 + 150000); // 1.095.000
+      expect(afterCreateStats.totalPaid).toBe(290000 + 50000);     // 340.000
+      expect(afterCreateStats.totalReceivables).toBe(655000 + 100000); // 755.000
+
+      // Also record an explicit payment for this order
+      await createPayment({
+        order_id: order.id,
+        amount: 50000,
+        payment_method: "TRANSFER",
+        notes: "DP Pelanggan Tes",
+      });
+
+      const paymentsBefore = await getPayments({ order_id: order.id });
+      expect(paymentsBefore.length).toBeGreaterThanOrEqual(1);
+
+      // Now DELETE the order
+      const deleteResult = await deleteOrder(order.id);
+      expect(deleteResult.deleted).toBe(true);
+      expect(deleteResult.id).toBe(order.id);
+
+      // Verify order is gone
+      const deletedLookup = await getOrderById(order.id);
+      expect(deletedLookup).toBeNull();
+
+      // Verify associated payments are wiped
+      const paymentsAfter = await getPayments({ order_id: order.id });
+      expect(paymentsAfter.length).toBe(0);
+
+      // Verify financial metrics reset exactly back to initial values
+      const afterDeleteStats = await getOrderSummaryStats();
+      expect(afterDeleteStats.totalOrders).toBe(9);
+      expect(afterDeleteStats.totalRevenue).toBe(945000);
+      expect(afterDeleteStats.totalPaid).toBe(290000);
+      expect(afterDeleteStats.totalReceivables).toBe(655000);
+
+      // Verify orders list does not contain deleted order
+      const finalOrders = await getOrders();
+      expect(finalOrders.length).toBe(9);
+      expect(finalOrders.some((o) => o.id === order.id)).toBe(false);
+    });
+
+    it("should throw an error when attempting to delete a non-existent order", async () => {
+      await expect(deleteOrder("non-existent-order-id")).rejects.toThrow(
+        'Pesanan dengan ID atau nomor "non-existent-order-id" tidak ditemukan.'
+      );
     });
   });
 });

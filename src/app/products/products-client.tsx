@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { ProductWithBOM } from "@/lib/data/initial-data";
+import { ProductWithBOM, BomPartItem, BomHardwareItem } from "@/lib/data/initial-data";
 import { ProductCategory, ProductType, CalculationMode } from "@/types/database";
 import { formatRupiah, formatNumber } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,6 +30,8 @@ import {
   TrendingUp,
   Tag,
   Clock,
+  Zap,
+  Sparkles,
 } from "lucide-react";
 
 interface ProductsClientProps {
@@ -50,6 +52,7 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
   // Modals state
   const [showAddModelModal, setShowAddModelModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showAddCategoryInline, setShowAddCategoryInline] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductWithBOM | null>(null);
 
   // Feedback notifications
@@ -64,23 +67,43 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
   const [formDescription, setFormDescription] = useState("");
   const [formCalcMode, setFormCalcMode] = useState<CalculationMode>("STANDARD");
   const [formOverheadMultiplier, setFormOverheadMultiplier] = useState(1.20);
-  const [formPrintMinutes, setFormPrintMinutes] = useState(240);
+  const [formPrintMinutes, setFormPrintMinutes] = useState(90);
   const [formMarkupPercent, setFormMarkupPercent] = useState(50);
   const [formSellingPrice, setFormSellingPrice] = useState<number | "">("");
 
-  // BOM Grams
-  const [formShadeGram, setFormShadeGram] = useState(100);
-  const [formBaseGram, setFormBaseGram] = useState(70);
-  const [formCapGram, setFormCapGram] = useState(0);
-  const [formElectricalCost, setFormElectricalCost] = useState(31700);
-  const [formPackagingCost, setFormPackagingCost] = useState(6500);
+  // Dynamic 3D Printed Parts BOM
+  const [formParts, setFormParts] = useState<BomPartItem[]>([
+    { id: "part-1", name: "Panel Depan", gram: 25, quantity: 1 },
+    { id: "part-2", name: "Panel Belakang", gram: 25, quantity: 1 },
+  ]);
+
+  // Dynamic Hardware & Non-Printing Components
+  const [formHardware, setFormHardware] = useState<BomHardwareItem[]>([
+    { id: "hw-1", name: "Magnet Neodymium (Bulat)", cost: 1500, quantity: 4 },
+    { id: "hw-2", name: "Kemasan Pouch / Box Mini", cost: 3000, quantity: 1 },
+  ]);
 
   // New Category Form
   const [newCategoryName, setNewCategoryName] = useState("");
 
-  // Live HPP & Pricing Calculations
-  const calculatedFilamentCost = (formShadeGram + formBaseGram + formCapGram) * 180;
-  const calculatedMaterialSubtotal = calculatedFilamentCost + formElectricalCost + formPackagingCost;
+  // Live Dynamic Calculations
+  const totalFilamentGram = useMemo(() => {
+    return formParts.reduce(
+      (sum, p) => sum + (Number(p.gram) || 0) * (Number(p.quantity) || 1),
+      0
+    );
+  }, [formParts]);
+
+  const calculatedFilamentCost = totalFilamentGram * 180;
+
+  const totalHardwareCost = useMemo(() => {
+    return formHardware.reduce(
+      (sum, h) => sum + (Number(h.cost) || 0) * (Number(h.quantity) || 1),
+      0
+    );
+  }, [formHardware]);
+
+  const calculatedMaterialSubtotal = calculatedFilamentCost + totalHardwareCost;
   const calculatedHpp =
     formProductType === "PRINTED"
       ? calculatedMaterialSubtotal * formOverheadMultiplier
@@ -107,6 +130,108 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
     });
   }, [products, showArchived, selectedCategory, selectedType, search]);
 
+  // Dynamic Parts Handlers
+  const handleAddPart = () => {
+    setFormParts((prev) => [
+      ...prev,
+      { id: `part-${Date.now()}`, name: `Komponen ${prev.length + 1}`, gram: 20, quantity: 1 },
+    ]);
+  };
+
+  const handleRemovePart = (id: string) => {
+    if (formParts.length <= 1) return;
+    setFormParts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleUpdatePart = (id: string, field: keyof BomPartItem, value: string | number) => {
+    setFormParts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+    );
+  };
+
+  // Dynamic Hardware Handlers
+  const handleAddHardware = () => {
+    setFormHardware((prev) => [
+      ...prev,
+      { id: `hw-${Date.now()}`, name: "Aksesori / Komponen Baru", cost: 2000, quantity: 1 },
+    ]);
+  };
+
+  const handleRemoveHardware = (id: string) => {
+    setFormHardware((prev) => prev.filter((h) => h.id !== id));
+  };
+
+  const handleUpdateHardware = (id: string, field: keyof BomHardwareItem, value: string | number) => {
+    setFormHardware((prev) =>
+      prev.map((h) => (h.id === id ? { ...h, [field]: value } : h))
+    );
+  };
+
+  // Preset Template Applicator
+  const applyTemplate = (templateName: "PANEL_VAPE" | "CLICKER" | "LAMPU" | "CUSTOM") => {
+    if (templateName === "PANEL_VAPE") {
+      setFormParts([
+        { id: `part-${Date.now()}-1`, name: "Panel Depan", gram: 25, quantity: 1 },
+        { id: `part-${Date.now()}-2`, name: "Panel Belakang", gram: 25, quantity: 1 },
+      ]);
+      setFormHardware([
+        { id: `hw-${Date.now()}-1`, name: "Magnet Neodymium (Bulat)", cost: 1500, quantity: 4 },
+        { id: `hw-${Date.now()}-2`, name: "Kemasan Pouch / Box Mini", cost: 3000, quantity: 1 },
+      ]);
+      setFormPrintMinutes(90);
+    } else if (templateName === "CLICKER") {
+      setFormParts([
+        { id: `part-${Date.now()}-1`, name: "Body / Case Clicker", gram: 18, quantity: 1 },
+        { id: `part-${Date.now()}-2`, name: "Keycap 3D Print", gram: 6, quantity: 1 },
+      ]);
+      setFormHardware([
+        { id: `hw-${Date.now()}-1`, name: "Switch Mechanical (Kailh/Outemu)", cost: 4500, quantity: 1 },
+        { id: `hw-${Date.now()}-2`, name: "Gantungan Kunci / Ring", cost: 1500, quantity: 1 },
+        { id: `hw-${Date.now()}-3`, name: "Kemasan Klip / Stiker", cost: 1000, quantity: 1 },
+      ]);
+      setFormPrintMinutes(45);
+    } else if (templateName === "LAMPU") {
+      setFormParts([
+        { id: `part-${Date.now()}-1`, name: "Shade", gram: 98, quantity: 1 },
+        { id: `part-${Date.now()}-2`, name: "Base", gram: 68, quantity: 1 },
+      ]);
+      setFormHardware([
+        { id: `hw-${Date.now()}-1`, name: "Kit Kelistrikan (Fitting E27 + LED + Sakelar)", cost: 31700, quantity: 1 },
+        { id: `hw-${Date.now()}-2`, name: "Kemasan & Box Kardus", cost: 6500, quantity: 1 },
+      ]);
+      setFormPrintMinutes(240);
+    } else {
+      setFormParts([
+        { id: `part-${Date.now()}-1`, name: "Komponen Utama", gram: 50, quantity: 1 },
+      ]);
+      setFormHardware([
+        { id: `hw-${Date.now()}-1`, name: "Kemasan & Aksesori", cost: 3000, quantity: 1 },
+      ]);
+      setFormPrintMinutes(120);
+    }
+  };
+
+  const handleCreateCategoryInline = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const res = await createProductCategoryAction(newCategoryName.trim());
+      if (res.success && res.category) {
+        setCategoryList((prev) => [...prev, res.category!]);
+        setFormCategoryId(res.category.id);
+        setShowAddCategoryInline(false);
+        const lower = res.category.name.toLowerCase();
+        setNewCategoryName("");
+        if (lower.includes("vape") || lower.includes("panel")) {
+          applyTemplate("PANEL_VAPE");
+        } else if (lower.includes("clicker") || lower.includes("fidget")) {
+          applyTemplate("CLICKER");
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const resetForm = () => {
     setFormName("");
     setFormSku("");
@@ -115,14 +240,10 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
     setFormDescription("");
     setFormCalcMode("STANDARD");
     setFormOverheadMultiplier(1.20);
-    setFormPrintMinutes(240);
+    setFormPrintMinutes(90);
     setFormMarkupPercent(50);
     setFormSellingPrice("");
-    setFormShadeGram(100);
-    setFormBaseGram(70);
-    setFormCapGram(0);
-    setFormElectricalCost(31700);
-    setFormPackagingCost(6500);
+    applyTemplate("PANEL_VAPE");
     setEditingProduct(null);
   };
 
@@ -143,11 +264,35 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
     setFormPrintMinutes(p.print_time_minutes || 0);
     setFormMarkupPercent(p.markup_percent || 50);
     setFormSellingPrice(p.selling_price);
-    setFormShadeGram(p.bom.shadeGram || 0);
-    setFormBaseGram(p.bom.baseGram || 0);
-    setFormCapGram(p.bom.capGram || 0);
-    setFormElectricalCost(p.bom.electricalCost || 0);
-    setFormPackagingCost(p.bom.packagingCost || 0);
+
+    // Populate dynamic parts
+    if (p.bom?.parts && p.bom.parts.length > 0) {
+      setFormParts(p.bom.parts);
+    } else {
+      const legacyParts: BomPartItem[] = [];
+      if (p.bom?.shadeGram) legacyParts.push({ id: "p-shade", name: "Shade", gram: p.bom.shadeGram, quantity: 1 });
+      if (p.bom?.baseGram) legacyParts.push({ id: "p-base", name: "Base", gram: p.bom.baseGram, quantity: 1 });
+      if (p.bom?.capGram) legacyParts.push({ id: "p-cap", name: "Cap / Nut", gram: p.bom.capGram, quantity: 1 });
+      if (legacyParts.length === 0) {
+        legacyParts.push({ id: "p-1", name: "Komponen Utama", gram: p.bom?.totalFilamentGram || 50, quantity: 1 });
+      }
+      setFormParts(legacyParts);
+    }
+
+    // Populate dynamic hardware
+    if (p.bom?.hardware && p.bom.hardware.length > 0) {
+      setFormHardware(p.bom.hardware);
+    } else {
+      const legacyHw: BomHardwareItem[] = [];
+      if (p.bom?.electricalCost) {
+        legacyHw.push({ id: "hw-elec", name: "Kit Kelistrikan / Komponen", cost: p.bom.electricalCost, quantity: 1 });
+      }
+      if (p.bom?.packagingCost) {
+        legacyHw.push({ id: "hw-pack", name: "Kemasan & Box", cost: p.bom.packagingCost, quantity: 1 });
+      }
+      setFormHardware(legacyHw);
+    }
+
     setShowAddModelModal(true);
   };
 
@@ -174,13 +319,15 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
       selling_price: effectiveSellingPrice,
       markup_percent: formMarkupPercent,
       bom: {
-        shadeGram: formShadeGram,
-        baseGram: formBaseGram,
-        capGram: formCapGram,
-        totalFilamentGram: formShadeGram + formBaseGram + formCapGram,
+        parts: formParts,
+        hardware: formHardware,
+        shadeGram: formParts[0]?.gram || 0,
+        baseGram: formParts[1]?.gram || 0,
+        capGram: formParts[2]?.gram || 0,
+        totalFilamentGram,
         filamentCost: calculatedFilamentCost,
-        electricalCost: formElectricalCost,
-        packagingCost: formPackagingCost,
+        electricalCost: totalHardwareCost,
+        packagingCost: 0,
         subtotalMaterial: calculatedMaterialSubtotal,
         overheadMultiplier: formOverheadMultiplier,
       },
@@ -516,33 +663,78 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
-                        <span className="text-[10px] text-zinc-400 block">Filamen Total</span>
-                        <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                          {formatRupiah(product.bom.filamentCost)}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 block">
-                          {product.bom.totalFilamentGram} gram
-                        </span>
-                      </div>
+                    {product.bom.parts && product.bom.parts.length > 0 ? (
+                      <div className="space-y-2">
+                        {/* 3D Printed Parts Badges */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {product.bom.parts.map((part) => (
+                            <span
+                              key={part.id}
+                              className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
+                            >
+                              {part.name}: {part.gram}g {part.quantity > 1 ? `(×${part.quantity})` : ""}
+                            </span>
+                          ))}
+                        </div>
 
-                      <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
-                        <span className="text-[10px] text-zinc-400 block">Kelistrikan (LED+Fit)</span>
-                        <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                          {formatRupiah(product.bom.electricalCost)}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 block">E27 + Inlite 3W</span>
-                      </div>
+                        {/* Cost Breakdown */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
+                            <span className="text-[10px] text-zinc-400 block">Biaya Filamen</span>
+                            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                              {formatRupiah(product.bom.filamentCost)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">
+                              {product.bom.totalFilamentGram} gram total
+                            </span>
+                          </div>
 
-                      <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
-                        <span className="text-[10px] text-zinc-400 block">Kemasan & Box</span>
-                        <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                          {formatRupiah(product.bom.packagingCost)}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 block">Kardus + Bubble</span>
+                          <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
+                            <span className="text-[10px] text-zinc-400 block">Hardware & Kemasan</span>
+                            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                              {formatRupiah(
+                                product.bom.hardware && product.bom.hardware.length > 0
+                                  ? product.bom.hardware.reduce((s, h) => s + (Number(h.cost) || 0) * (Number(h.quantity) || 1), 0)
+                                  : (product.bom.electricalCost || 0) + (product.bom.packagingCost || 0)
+                              )}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block truncate">
+                              {product.bom.hardware && product.bom.hardware.length > 0
+                                ? product.bom.hardware.map((h) => h.name).join(", ")
+                                : "Aksesori / Kit"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
+                          <span className="text-[10px] text-zinc-400 block">Filamen Total</span>
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                            {formatRupiah(product.bom.filamentCost)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">
+                            {product.bom.totalFilamentGram} gram
+                          </span>
+                        </div>
+
+                        <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
+                          <span className="text-[10px] text-zinc-400 block">Kelistrikan (LED+Fit)</span>
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                            {formatRupiah(product.bom.electricalCost)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">E27 + Inlite 3W</span>
+                        </div>
+
+                        <div className="rounded-lg bg-zinc-100/60 dark:bg-zinc-800/40 p-2">
+                          <span className="text-[10px] text-zinc-400 block">Kemasan & Box</span>
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                            {formatRupiah(product.bom.packagingCost)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">Kardus + Bubble</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Production & Dimensions Specs Footer */}
@@ -626,20 +818,63 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">
-                    Kategori Produk
-                  </label>
-                  <select
-                    value={formCategoryId}
-                    onChange={(e) => setFormCategoryId(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
-                  >
-                    {categoryList.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      Kategori Produk
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddCategoryInline(!showAddCategoryInline)}
+                      className="text-[11px] text-amber-600 hover:text-amber-700 dark:text-amber-400 font-medium cursor-pointer"
+                    >
+                      {showAddCategoryInline ? "Batal" : "+ Kategori Baru"}
+                    </button>
+                  </div>
+
+                  {showAddCategoryInline ? (
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        placeholder="Misal: Panel Vape, Clicker..."
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        className="text-xs h-9"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleCreateCategoryInline}
+                        className="h-9 px-3 bg-amber-600 hover:bg-amber-700 text-white shrink-0 text-xs"
+                      >
+                        Tambah
+                      </Button>
+                    </div>
+                  ) : (
+                    <select
+                      value={formCategoryId}
+                      onChange={(e) => {
+                        const newCatId = e.target.value;
+                        setFormCategoryId(newCatId);
+                        const cat = categoryList.find((c) => c.id === newCatId);
+                        if (cat) {
+                          const lower = cat.name.toLowerCase();
+                          if (lower.includes("vape") || lower.includes("panel")) {
+                            applyTemplate("PANEL_VAPE");
+                          } else if (lower.includes("clicker") || lower.includes("fidget")) {
+                            applyTemplate("CLICKER");
+                          } else if (lower.includes("lampu") || lower.includes("ambient")) {
+                            applyTemplate("LAMPU");
+                          }
+                        }
+                      }}
+                      className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 text-xs"
+                    >
+                      {categoryList.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -649,7 +884,7 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
                   <select
                     value={formProductType}
                     onChange={(e) => setFormProductType(e.target.value as ProductType)}
-                    className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                    className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 text-xs"
                   >
                     <option value="PRINTED">3D Printed (Dengan BOM)</option>
                     <option value="PROCURED">Pengadaan Barang Jadi (Supplier)</option>
@@ -665,105 +900,244 @@ export function ProductsClient({ initialProducts, categories }: ProductsClientPr
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Keterangan desain, material, atau fungsi lampu ambient..."
+                  placeholder="Keterangan desain, material, variasi warna, atau fungsi produk..."
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   className="w-full p-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 text-xs focus:ring-1 focus:ring-amber-500"
                 />
               </div>
 
-              {/* BOM Materials Inputs */}
+              {/* Dynamic BOM Section */}
               {formProductType === "PRINTED" && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
-                      <Layers className="h-4 w-4" /> Takaran Filamen & Komponen (BOM)
+                <div className="space-y-4 pt-1">
+                  {/* Presets & Templates Bar */}
+                  <div className="rounded-xl bg-zinc-100/80 dark:bg-zinc-800/60 p-2.5 border border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      Template Struktur BOM:
                     </span>
-                    <span className="font-mono text-[11px] text-zinc-500">
-                      Total: {formShadeGram + formBaseGram + formCapGram} gram
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <div>
-                      <label className="text-[11px] text-zinc-500 block mb-1">Shade (Gram)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={formShadeGram}
-                        onChange={(e) => setFormShadeGram(Number(e.target.value) || 0)}
-                        className="text-xs h-8"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-zinc-500 block mb-1">Base (Gram)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={formBaseGram}
-                        onChange={(e) => setFormBaseGram(Number(e.target.value) || 0)}
-                        className="text-xs h-8"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-zinc-500 block mb-1">Cap / Nut (Gram)</label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={formCapGram}
-                        onChange={(e) => setFormCapGram(Number(e.target.value) || 0)}
-                        className="text-xs h-8"
-                      />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => applyTemplate("PANEL_VAPE")}
+                        className="px-2.5 py-1 text-[11px] rounded-md font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800 cursor-pointer transition-colors"
+                      >
+                        ⚡ Panel Vape (Sepasang)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyTemplate("CLICKER")}
+                        className="px-2.5 py-1 text-[11px] rounded-md font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 cursor-pointer transition-colors"
+                      >
+                        ⚡ Fidget Clicker
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyTemplate("LAMPU")}
+                        className="px-2.5 py-1 text-[11px] rounded-md font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 cursor-pointer transition-colors"
+                      >
+                        ⚡ Lampu Ambient
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyTemplate("CUSTOM")}
+                        className="px-2.5 py-1 text-[11px] rounded-md font-medium bg-white text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700 cursor-pointer transition-colors"
+                      >
+                        ⚡ Kustom Bebas
+                      </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div>
-                      <label className="text-[11px] text-zinc-500 block mb-1">Biaya Kelistrikan (Rp)</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={formElectricalCost}
-                        onChange={(e) => setFormElectricalCost(Number(e.target.value) || 0)}
-                        className="text-xs h-8"
-                      />
+                  {/* Section 1: 3D Printed Parts (Filament) */}
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-300">
+                        <Layers className="h-4 w-4 text-amber-600" />
+                        <span>1. Komponen Cetak 3D (Filamen)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded">
+                          Total: {totalFilamentGram}g ({formatRupiah(calculatedFilamentCost)})
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddPart}
+                          className="h-7 text-xs gap-1 border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Tambah Komponen
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[11px] text-zinc-500 block mb-1">Biaya Kemasan & Box (Rp)</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={formPackagingCost}
-                        onChange={(e) => setFormPackagingCost(Number(e.target.value) || 0)}
-                        className="text-xs h-8"
-                      />
+
+                    <div className="space-y-2 pt-1">
+                      {formParts.map((part) => (
+                        <div
+                          key={part.id}
+                          className="flex items-center gap-2 bg-white dark:bg-zinc-900 p-2 rounded-lg border border-amber-200/60 dark:border-zinc-800"
+                        >
+                          <div className="flex-1">
+                            <label className="text-[10px] text-zinc-400 block mb-0.5">Nama Bagian / Komponen</label>
+                            <Input
+                              value={part.name}
+                              placeholder="Misal: Panel Depan, Panel Belakang..."
+                              onChange={(e) => handleUpdatePart(part.id, "name", e.target.value)}
+                              className="text-xs h-8"
+                            />
+                          </div>
+                          <div className="w-24">
+                            <label className="text-[10px] text-zinc-400 block mb-0.5">Berat / Unit (g)</label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={part.gram}
+                              onChange={(e) => handleUpdatePart(part.id, "gram", Number(e.target.value) || 0)}
+                              className="text-xs h-8 text-right font-mono"
+                            />
+                          </div>
+                          <div className="w-16">
+                            <label className="text-[10px] text-zinc-400 block mb-0.5">Qty</label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={part.quantity}
+                              onChange={(e) => handleUpdatePart(part.id, "quantity", Number(e.target.value) || 1)}
+                              className="text-xs h-8 text-center font-mono"
+                            />
+                          </div>
+                          <div className="w-20 text-right pr-1">
+                            <span className="text-[10px] text-zinc-400 block">Subtotal</span>
+                            <span className="text-xs font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                              {(Number(part.gram) || 0) * (Number(part.quantity) || 1)} g
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={formParts.length <= 1}
+                            onClick={() => handleRemovePart(part.id)}
+                            className="p-1.5 text-zinc-400 hover:text-rose-500 disabled:opacity-30 disabled:hover:text-zinc-400 cursor-pointer"
+                            title="Hapus baris"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div>
-                      <label className="text-[11px] text-zinc-500 block mb-1">Estimasi Waktu Cetak (Menit)</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={formPrintMinutes}
-                        onChange={(e) => setFormPrintMinutes(Number(e.target.value) || 0)}
-                        className="text-xs h-8"
-                      />
+                  {/* Section 2: Hardware & Non-Printing Components */}
+                  <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold text-indigo-900 dark:text-indigo-300">
+                        <Zap className="h-4 w-4 text-indigo-600" />
+                        <span>2. Komponen Non-Cetak & Aksesori (Hardware/Packaging)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-indigo-800 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/60 px-2 py-0.5 rounded">
+                          Total: {formatRupiah(totalHardwareCost)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddHardware}
+                          className="h-7 text-xs gap-1 border-indigo-300 text-indigo-800 hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Tambah Hardware
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[11px] text-zinc-500 block mb-1">Multiplier Overhead</label>
-                      <Input
-                        type="number"
-                        step="0.05"
-                        min="1.0"
-                        value={formOverheadMultiplier}
-                        onChange={(e) => setFormOverheadMultiplier(Number(e.target.value) || 1.2)}
-                        className="text-xs h-8 font-mono"
-                      />
+
+                    {formHardware.length === 0 ? (
+                      <div className="text-[11px] text-zinc-500 italic p-3 text-center bg-white/60 dark:bg-zinc-900/40 rounded-lg">
+                        Tidak ada hardware tambahan (100% cetak 3D murni). Klik &quot;+ Tambah Hardware&quot; jika model membutuhkan magnet, switch, baut, atau kemasan khusus.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 pt-1">
+                        {formHardware.map((hw) => (
+                          <div
+                            key={hw.id}
+                            className="flex items-center gap-2 bg-white dark:bg-zinc-900 p-2 rounded-lg border border-indigo-200/60 dark:border-zinc-800"
+                          >
+                            <div className="flex-1">
+                              <label className="text-[10px] text-zinc-400 block mb-0.5">Nama Hardware / Komponen</label>
+                              <Input
+                                value={hw.name}
+                                placeholder="Misal: Magnet Neodymium, Switch, Box..."
+                                onChange={(e) => handleUpdateHardware(hw.id, "name", e.target.value)}
+                                className="text-xs h-8"
+                              />
+                            </div>
+                            <div className="w-28">
+                              <label className="text-[10px] text-zinc-400 block mb-0.5">Biaya / Unit (Rp)</label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={hw.cost}
+                                onChange={(e) => handleUpdateHardware(hw.id, "cost", Number(e.target.value) || 0)}
+                                className="text-xs h-8 text-right font-mono"
+                              />
+                            </div>
+                            <div className="w-16">
+                              <label className="text-[10px] text-zinc-400 block mb-0.5">Qty</label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={hw.quantity}
+                                onChange={(e) => handleUpdateHardware(hw.id, "quantity", Number(e.target.value) || 1)}
+                                className="text-xs h-8 text-center font-mono"
+                              />
+                            </div>
+                            <div className="w-24 text-right pr-1">
+                              <span className="text-[10px] text-zinc-400 block">Subtotal</span>
+                              <span className="text-xs font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+                                {formatRupiah((Number(hw.cost) || 0) * (Number(hw.quantity) || 1))}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveHardware(hw.id)}
+                              className="p-1.5 text-zinc-400 hover:text-rose-500 cursor-pointer"
+                              title="Hapus baris"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section 3: Machine Parameters & Overhead */}
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] text-zinc-600 dark:text-zinc-400 block mb-1">
+                          Estimasi Waktu Cetak (Menit)
+                        </label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={formPrintMinutes}
+                          onChange={(e) => setFormPrintMinutes(Number(e.target.value) || 0)}
+                          className="text-xs h-8"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-600 dark:text-zinc-400 block mb-1">
+                          Multiplier Overhead Standar
+                        </label>
+                        <Input
+                          type="number"
+                          step="0.05"
+                          min="1.0"
+                          value={formOverheadMultiplier}
+                          onChange={(e) => setFormOverheadMultiplier(Number(e.target.value) || 1.2)}
+                          className="text-xs h-8 font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

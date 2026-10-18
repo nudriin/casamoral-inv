@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { getOrderById } from "@/lib/services/orders-service";
+import { getProducts } from "@/lib/services/products-service";
 import { OrderDetailClient } from "./order-detail-client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
@@ -20,7 +21,10 @@ export async function generateMetadata({ params }: OrderDetailPageProps) {
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = await params;
-  const order = await getOrderById(id);
+  const [order, products] = await Promise.all([
+    getOrderById(id),
+    getProducts(false),
+  ]);
 
   if (!order) {
     return (
@@ -41,5 +45,5 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     );
   }
 
-  return <OrderDetailClient initialOrder={order} />;
+  return <OrderDetailClient initialOrder={order} products={products} />;
 }

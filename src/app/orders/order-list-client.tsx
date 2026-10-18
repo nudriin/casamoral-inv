@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Order, OrderStatus, PaymentStatus } from "@/types/database";
+import { Order, OrderStatus, PaymentStatus, Product } from "@/types/database";
+import { ProductWithBOM } from "@/lib/data/initial-data";
 import { formatRupiah, formatDateIndo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,14 +20,21 @@ import {
   PackageCheck,
   XCircle,
   Sparkles,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { EditOrderModal } from "@/components/orders/edit-order-modal";
+import { DeleteOrderModal } from "@/components/orders/delete-order-modal";
 
 interface OrderListClientProps {
   initialOrders: Order[];
+  products?: ProductWithBOM[] | Product[];
 }
 
-export function OrderListClient({ initialOrders }: OrderListClientProps) {
-  const [orders] = useState<Order[]>(initialOrders);
+export function OrderListClient({ initialOrders, products }: OrderListClientProps) {
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -162,7 +170,7 @@ export function OrderListClient({ initialOrders }: OrderListClientProps) {
       default:
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700">
-            Direct / Langsung
+            Direct
           </span>
         );
     }
@@ -278,7 +286,7 @@ export function OrderListClient({ initialOrders }: OrderListClientProps) {
                   <th className="py-3 px-4">Pelanggan & Lokasi</th>
                   <th className="py-3 px-4">Kanal</th>
                   <th className="py-3 px-4">Rincian Produk & Kustomisasi</th>
-                  <th className="py-3 px-4 text-right">Nilai Pesanan</th>
+                  <th className="py-3 px-4 text-right">Omzet / Nilai</th>
                   <th className="py-3 px-4 text-center">Status Pembayaran</th>
                   <th className="py-3 px-4 text-center">Status Produksi</th>
                   <th className="py-3 px-4 text-center">Aksi</th>
@@ -293,12 +301,19 @@ export function OrderListClient({ initialOrders }: OrderListClientProps) {
                       className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors"
                     >
                       <td className="py-3 px-4 align-top">
-                        <Link
-                          href={`/orders/${order.id}`}
-                          className="font-mono font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1"
-                        >
-                          {order.order_number}
-                        </Link>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Link
+                            href={`/orders/${order.id}`}
+                            className="font-mono font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline"
+                          >
+                            {order.order_number}
+                          </Link>
+                          {order.order_number.startsWith("POS-") && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              Kasir POS
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-zinc-400 mt-0.5">
                           {formatDateIndo(order.order_date)}
                         </div>
@@ -309,7 +324,7 @@ export function OrderListClient({ initialOrders }: OrderListClientProps) {
                           {order.customer?.name || "Pelanggan Umum"}
                         </div>
                         <div className="text-xs text-zinc-500">
-                          {order.customer?.city || "Sukamara"}
+                          {order.customer?.city || "-"}
                         </div>
                       </td>
 
@@ -351,11 +366,27 @@ export function OrderListClient({ initialOrders }: OrderListClientProps) {
                       </td>
 
                       <td className="py-3 px-4 align-top text-right font-mono font-semibold text-zinc-900 dark:text-zinc-100">
-                        {formatRupiah(order.total_amount)}
-                        {order.total_amount === 0 && (
-                          <div className="text-[11px] text-zinc-400 font-normal">
-                            Sampel / Promosi
+                        {order.platform_fee && order.platform_fee > 0 ? (
+                          <div>
+                            <span className="text-emerald-700 dark:text-emerald-400 font-bold block">
+                              {formatRupiah(order.total_amount - order.platform_fee)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-normal block">
+                              Tagihan: {formatRupiah(order.total_amount)}
+                            </span>
+                            <span className="text-[9px] text-orange-600 font-medium block">
+                              (Fee: -{formatRupiah(order.platform_fee)})
+                            </span>
                           </div>
+                        ) : (
+                          <>
+                            {formatRupiah(order.total_amount)}
+                            {order.total_amount === 0 && (
+                              <div className="text-[11px] text-zinc-400 font-normal">
+                                Sampel / Promosi
+                              </div>
+                            )}
+                          </>
                         )}
                       </td>
 
@@ -373,11 +404,28 @@ export function OrderListClient({ initialOrders }: OrderListClientProps) {
                       </td>
 
                       <td className="py-3 px-4 align-top text-center">
-                        <Link href={`/orders/${order.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
-                            Detail <ChevronRight className="w-3.5 h-3.5" />
-                          </Button>
-                        </Link>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setEditingOrder(order)}
+                            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer transition-colors"
+                          >
+                            <Pencil className="w-2.5 h-2.5" /> Edit
+                          </button>
+                          <Link href={`/orders/${order.id}`}>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 gap-0.5 text-[11px]">
+                              Detail <ChevronRight className="w-3 h-3" />
+                            </Button>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingOrder(order)}
+                            title="Hapus Transaksi"
+                            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -387,6 +435,33 @@ export function OrderListClient({ initialOrders }: OrderListClientProps) {
           </div>
         </div>
       )}
+
+      {editingOrder && (
+        <EditOrderModal
+          order={editingOrder}
+          isOpen={true}
+          availableProducts={products}
+          onClose={() => setEditingOrder(null)}
+          onSaved={(updatedOrder) => {
+            setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+            setEditingOrder(null);
+          }}
+          onDeleted={(deletedId) => {
+            setOrders((prev) => prev.filter((o) => o.id !== deletedId));
+            setEditingOrder(null);
+          }}
+        />
+      )}
+
+      <DeleteOrderModal
+        order={deletingOrder}
+        isOpen={deletingOrder !== null}
+        onClose={() => setDeletingOrder(null)}
+        onDeleted={(deletedId) => {
+          setOrders((prev) => prev.filter((o) => o.id !== deletedId));
+          setDeletingOrder(null);
+        }}
+      />
     </div>
   );
 }

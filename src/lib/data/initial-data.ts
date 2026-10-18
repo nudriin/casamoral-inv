@@ -201,14 +201,30 @@ export const INITIAL_MATERIALS: Material[] = [
   },
 ];
 
+export interface BomPartItem {
+  id: string;
+  name: string;        // e.g. "Panel Depan", "Panel Belakang", "Shade", "Base", "Keycap", "Body"
+  gram: number;        // Gram per unit
+  quantity: number;    // Qty (e.g. 1, 2)
+}
+
+export interface BomHardwareItem {
+  id: string;
+  name: string;        // e.g. "Magnet Neodymium", "Switch Mechanical", "Kit Kelistrikan", "Kemasan"
+  cost: number;        // Rp per unit
+  quantity: number;    // Qty
+}
+
 export interface ProductWithBOM extends Product {
   bom: {
-    shadeGram: number;
-    baseGram: number;
-    capGram: number;
+    parts?: BomPartItem[];
+    hardware?: BomHardwareItem[];
+    shadeGram?: number;
+    baseGram?: number;
+    capGram?: number;
     totalFilamentGram: number;
     filamentCost: number;
-    electricalCost: number; // LED + Fitting + Sakelar + Pelindung
+    electricalCost: number; // LED + Fitting + Sakelar or Hardware Cost
     packagingCost: number;  // Kardus + Bubble Wrap + Stiker
     subtotalMaterial: number;
     overheadMultiplier: number;

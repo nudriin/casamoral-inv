@@ -103,6 +103,80 @@ describe("CASA MORAL — Revision & Feature Completion Test Suite", () => {
       expect(fetched?.name).toBe("Lumi Emerald Edition");
     });
 
+    it("should support dynamic BOM format for non-lamp products (e.g. Panel Vape sold as a pair with magnets)", async () => {
+      const vapePanel = await createProduct({
+        name: "Boro Panel Vape - Hex Pattern (Pair)",
+        sku: "VP-BORO-HEX",
+        category_id: "cat-accessory",
+        product_type: "PRINTED",
+        description: "Panel vape magnetik dijual sepasang (depan & belakang) untuk device Boro/AIO",
+        standard_overhead_multiplier: 1.20,
+        print_time_minutes: 90,
+        bom: {
+          parts: [
+            { id: "p-1", name: "Panel Depan (Front)", gram: 25, quantity: 1 },
+            { id: "p-2", name: "Panel Belakang (Back)", gram: 25, quantity: 1 },
+          ],
+          hardware: [
+            { id: "h-1", name: "Magnet Neodymium Bulat 4x2mm", cost: 1500, quantity: 4 },
+            { id: "h-2", name: "Pouch Packaging & Sticker", cost: 3000, quantity: 1 },
+          ],
+        },
+        markup_percent: 60,
+      });
+
+      expect(vapePanel.id).toBeDefined();
+      expect(vapePanel.bom.parts).toHaveLength(2);
+      expect(vapePanel.bom.hardware).toHaveLength(2);
+
+      // Total filament: 25g + 25g = 50g
+      expect(vapePanel.bom.totalFilamentGram).toBe(50);
+      // Filament cost: 50g * Rp 180 = Rp 9.000
+      expect(vapePanel.bom.filamentCost).toBe(9000);
+      // Hardware cost: (1500 * 4) + (3000 * 1) = 6000 + 3000 = Rp 9.000
+      // Material subtotal: 9000 + 9000 = Rp 18.000
+      expect(vapePanel.bom.subtotalMaterial).toBe(18000);
+      // HPP: 18.000 * 1.20 = Rp 21.600
+      expect(vapePanel.current_hpp).toBe(21600);
+      // Recommended Price: 21.600 * 1.60 = 34.560 -> rounded up to Rp 35.000
+      expect(vapePanel.recommended_price).toBe(34560);
+      expect(vapePanel.selling_price).toBe(35000);
+    });
+
+    it("should support dynamic BOM format for Clicker / Fidget gadgets with mechanical switches", async () => {
+      const clicker = await createProduct({
+        name: "Mechanical Switch Clicker Fidget",
+        sku: "CK-FIDGET-01",
+        category_id: "cat-accessory",
+        product_type: "PRINTED",
+        description: "Fidget toy gantungan kunci dengan mechanical switch Outemu Blue",
+        standard_overhead_multiplier: 1.20,
+        print_time_minutes: 45,
+        bom: {
+          parts: [
+            { id: "cp-1", name: "Body Case Clicker", gram: 18, quantity: 1 },
+            { id: "cp-2", name: "Keycap Custom 3D", gram: 6, quantity: 1 },
+          ],
+          hardware: [
+            { id: "ch-1", name: "Outemu Blue Clicky Switch", cost: 4500, quantity: 1 },
+            { id: "ch-2", name: "Ring Gantungan Kunci", cost: 1500, quantity: 1 },
+            { id: "ch-3", name: "Kemasan Plastik Klip", cost: 1000, quantity: 1 },
+          ],
+        },
+        markup_percent: 50,
+      });
+
+      expect(clicker.id).toBeDefined();
+      expect(clicker.bom.parts).toHaveLength(2);
+      expect(clicker.bom.totalFilamentGram).toBe(24); // 18 + 6
+      expect(clicker.bom.filamentCost).toBe(4320); // 24 * 180
+      // Hardware: 4500 + 1500 + 1000 = 7000
+      // Subtotal: 4320 + 7000 = 11320
+      expect(clicker.bom.subtotalMaterial).toBe(11320);
+      // HPP: 11320 * 1.2 = 13584
+      expect(clicker.current_hpp).toBe(13584);
+    });
+
     it("should safely archive products without breaking historical references", async () => {
       const newProd = await createProduct({
         name: "Produk Percobaan",

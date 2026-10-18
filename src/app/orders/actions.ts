@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import {
   createOrder,
+  updateOrder,
   updateOrderStatus,
   updateOrderPayment,
+  deleteOrder,
   CreateOrderPayload,
+  UpdateOrderPayload,
 } from "@/lib/services/orders-service";
 import { OrderStatus, PaymentStatus } from "@/types/database";
 
@@ -70,6 +73,43 @@ export async function createPaymentAction(payload: {
     return { success: true, payment };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Gagal mencatat pembayaran";
+    return { success: false, error: message };
+  }
+}
+
+export async function updateOrderAction(payload: UpdateOrderPayload) {
+  try {
+    const updated = await updateOrder(payload);
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${payload.order_id}`);
+    revalidatePath("/reports");
+    revalidatePath("/reports/recap");
+    revalidatePath("/reports/sales-analytics");
+    revalidatePath("/orders/receivables");
+    revalidatePath("/");
+    return { success: true, order: updated };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Gagal memperbarui data transaksi";
+    return { success: false, error: message };
+  }
+}
+
+export async function deleteOrderAction(orderId: string) {
+  try {
+    const res = await deleteOrder(orderId);
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath("/reports");
+    revalidatePath("/reports/recap");
+    revalidatePath("/reports/cash-flow");
+    revalidatePath("/reports/profit-loss");
+    revalidatePath("/reports/sales-analytics");
+    revalidatePath("/orders/receivables");
+    revalidatePath("/pos");
+    revalidatePath("/");
+    return { success: true, ...res };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Gagal menghapus data transaksi";
     return { success: false, error: message };
   }
 }

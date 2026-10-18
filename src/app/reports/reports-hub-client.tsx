@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { ProfitLossStatement, CashFlowStatement, SalesAnalytics } from "@/lib/services/reports-service";
+import { FinancialRecapSummary } from "@/lib/services/recap-service";
 import { Order } from "@/types/database";
 import { formatRupiah } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -19,15 +20,18 @@ import {
   Package,
 } from "lucide-react";
 import { FinancialIndicatorInfo, FinancialGlossaryModalButton } from "@/components/financial-indicator-guide";
+import { RecapClient } from "./recap/recap-client";
 
 interface ReportsHubClientProps {
   pl: ProfitLossStatement;
   cashFlow: CashFlowStatement;
   sales: SalesAnalytics;
   orders: Order[];
+  recap?: FinancialRecapSummary;
 }
 
-export function ReportsHubClient({ pl, cashFlow, sales, orders }: ReportsHubClientProps) {
+export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: ReportsHubClientProps) {
+  const [activeTab, setActiveTab] = useState<"RECAP" | "STATEMENTS">("RECAP");
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const handleExportOrdersCSV = () => {
@@ -142,21 +146,60 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders }: ReportsHubClie
 
   return (
     <div className="space-y-6">
-      {/* Top Banner with Glossary Trigger */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 shadow-xs">
-        <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
-            Pusat Pelaporan Finansial & Operasional Studio
-          </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Laporan berbasis transaksi terverifikasi dan standar akuntansi SAK EMKM
-          </p>
+      {/* Top Tab Navigation & Glossary */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-zinc-100/90 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-zinc-800/80 shadow-xs">
+          <button
+            onClick={() => setActiveTab("RECAP")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "RECAP"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+            }`}
+          >
+            <FileSpreadsheet className="h-4 w-4" /> 1. Buku Kas & Rekap Omzet
+          </button>
+          <button
+            onClick={() => setActiveTab("STATEMENTS")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "STATEMENTS"
+                ? "bg-amber-600 text-white shadow-sm"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+            }`}
+          >
+            <TrendingUp className="h-4 w-4" /> 2. Laporan Finansial SAK & Ekspor
+          </button>
         </div>
-        <FinancialGlossaryModalButton />
+        <div className="flex items-center gap-2 px-2">
+          <FinancialGlossaryModalButton />
+        </div>
       </div>
 
-      {/* 3 Main Report Navigation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* TAB 1: REKAP KEUANGAN & BUKU KAS HARIAN */}
+      {activeTab === "RECAP" && recap && (
+        <RecapClient initialRecap={recap} />
+      )}
+
+      {/* TAB 2: IKHTISAR SAK & PUSAT EKSPOR SPREADSHEET */}
+      {activeTab === "STATEMENTS" && (
+        <div className="space-y-6">
+          {/* Top Banner with Glossary Trigger */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/60 shadow-xs">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                  Pusat Pelaporan Finansial & Standar Akuntansi Studio
+                </h2>
+                <Badge className="bg-emerald-600 text-white font-bold text-[10px]">SAK EMKM</Badge>
+              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Laporan komprehensif berbasis transaksi studio, alokasi beban penyusutan printer, dan arus kas riil.
+              </p>
+            </div>
+          </div>
+
+          {/* 3 Main Report Navigation Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Report 1: Laba Rugi */}
         <Card className="hover:border-amber-400 dark:hover:border-amber-600 transition-all shadow-sm">
           <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
@@ -403,6 +446,8 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders }: ReportsHubClie
           </div>
         </CardContent>
       </Card>
+        </div>
+      )}
     </div>
   );
 }

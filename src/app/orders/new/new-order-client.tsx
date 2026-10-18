@@ -40,7 +40,7 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
 
   // Form states
   const [customerName, setCustomerName] = useState("");
-  const [customerCity, setCustomerCity] = useState("Sukamara");
+  const [customerCity, setCustomerCity] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [channel, setChannel] = useState<ChannelSource>("Direct");
 
@@ -51,6 +51,16 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
     () => products.find((p) => p.id === selectedProductId) || products[0] || null,
     [products, selectedProductId]
   );
+
+  // Check if selected product has a Cap (Model Lumi does NOT have a Cap)
+  const hasCap = useMemo(() => {
+    if (!selectedProduct) return true;
+    if (selectedProduct.bom?.capGram !== undefined && selectedProduct.bom.capGram === 0) {
+      return false;
+    }
+    const nameLower = selectedProduct.name.toLowerCase();
+    return !nameLower.includes("lumi");
+  }, [selectedProduct]);
 
   // Pricing & Quantities
   const [quantity, setQuantity] = useState(1);
@@ -91,12 +101,13 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
     const totalBeforeFees = pSubtotal.plus(aPrice).plus(ship).minus(disc);
     const totalAmount = Decimal.max(0, totalBeforeFees);
 
-    // Platform Fee (Shopee: 8% Admin + 4% Gratis Ongkir Xtra max 10k)
+    // Platform Fee (Shopee Presisi Toko: 9.5% Admin + Rp 1.250 + 0.5% PPh 22)
     let platformFee = new Decimal(0);
-    if (channel === "Shopee") {
-      const adminFee = totalAmount.times(0.08);
-      const ongkirXtra = Decimal.min(totalAmount.times(0.04), 10000);
-      platformFee = adminFee.plus(ongkirXtra);
+    if (channel === "Shopee" && totalAmount.greaterThan(0)) {
+      const adminFee = totalAmount.times(0.095);
+      const processFee = new Decimal(1250);
+      const pph22 = totalAmount.times(0.005);
+      platformFee = adminFee.plus(processFee).plus(pph22).toDecimalPlaces(0);
     }
 
     // Total Snapshot HPP for items
@@ -143,7 +154,9 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
       return;
     }
 
-    const colorDetails = `Base ${baseColor} + Shade ${shadeColor} + Cap ${capColor}`;
+    const colorDetails = hasCap
+      ? `Base ${baseColor} + Shade ${shadeColor} + Cap ${capColor}`
+      : `Base ${baseColor} + Shade ${shadeColor}`;
 
     let paid = 0;
     if (paymentStatus === "PAID") {
@@ -157,9 +170,10 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
     try {
       const res = await createOrderAction({
         customer_name: customerName.trim(),
-        customer_city: customerCity.trim(),
+        customer_city: customerCity.trim() || undefined,
         customer_phone: customerPhone.trim() || undefined,
         channel,
+        shopee_fee_model: "PRECISE_STORE",
         items: [
           {
             product_id: selectedProduct.id,
@@ -285,7 +299,7 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
                     onChange={(e) => setChannel(e.target.value as ChannelSource)}
                     className="mt-1 w-full rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                   >
-                    <option value="Direct">Direct / Langsung (Sukamara)</option>
+                    <option value="Direct">Direct</option>
                     <option value="Shopee">Shopee (Marketplace)</option>
                     <option value="WhatsApp">WhatsApp Chat</option>
                     <option value="Instagram">Instagram Direct Message</option>
@@ -305,7 +319,7 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
                 Model Lampu & Kustomisasi Warna
               </CardTitle>
               <CardDescription>
-                Pilih model lampu dan rincian kombinasi filamen (Base, Shade, Cap).
+                Pilih model lampu dan rincian kombinasi filamen ({hasCap ? "Base, Shade, Cap" : "Base & Shade"}).
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -345,10 +359,10 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
               <div className="border border-zinc-200/80 dark:border-zinc-800/80 rounded-lg p-3 bg-zinc-50/50 dark:bg-zinc-900/50 space-y-3">
                 <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
                   <Palette className="w-3.5 h-3.5 text-amber-500" />
-                  Kombinasi Warna Komponen (BOM 3-Bagian)
+                  {hasCap ? "Kombinasi Warna Komponen (BOM 3-Bagian)" : "Kombinasi Warna Komponen (BOM 2-Bagian: Tanpa Cap)"}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className={`grid grid-cols-1 ${hasCap ? "sm:grid-cols-3" : "sm:grid-cols-2"} gap-3`}>
                   <div>
                     <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
                       Shade (Kap Lampu)
@@ -383,22 +397,24 @@ export function NewOrderClient({ products }: NewOrderClientProps) {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-                      Cap / Mur Pengunci
-                    </label>
-                    <select
-                      value={capColor}
-                      onChange={(e) => setCapColor(e.target.value)}
-                      className="mt-1 w-full rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-xs cursor-pointer"
-                    >
-                      {COLOR_PRESETS.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {hasCap && (
+                    <div>
+                      <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                        Cap / Mur Pengunci
+                      </label>
+                      <select
+                        value={capColor}
+                        onChange={(e) => setCapColor(e.target.value)}
+                        className="mt-1 w-full rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-xs cursor-pointer"
+                      >
+                        {COLOR_PRESETS.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
