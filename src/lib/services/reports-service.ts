@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import { getOrders } from "./orders-service";
 import { getPayments } from "./payments-service";
 import { getExpenses, getExpensesSummary } from "./expenses-service";
-import { INITIAL_PRODUCTS, ALL_CAPITAL_PURCHASES } from "@/lib/data/initial-data";
+import { ALL_PRODUCTS, ALL_CAPITAL_PURCHASES } from "@/lib/data/initial-data";
 import { calculateBEP } from "@/lib/financial/bep-calculator";
 import { formatModelName } from "@/lib/utils";
 
@@ -286,8 +286,8 @@ export async function getSalesAnalytics(): Promise<SalesAnalytics> {
     }
   > = {};
 
-  // Initialize with initial products
-  for (const p of INITIAL_PRODUCTS) {
+  // Initialize with all master products (including Nomi & Lyra)
+  for (const p of ALL_PRODUCTS) {
     const printHours = p.print_time_minutes ? p.print_time_minutes / 60 : 4;
     productMap[p.id] = {
       id: p.id,
@@ -435,23 +435,30 @@ export async function getExecutiveDashboardMetrics(): Promise<ExecutiveDashboard
     getOrders(),
   ]);
 
-  // Receivables
+  // Receivables & Cash Received (separating marketplace fees from collectible amounts)
   let totalPaidDec = new Decimal(0);
-  let totalRevenueDec = new Decimal(0);
+  let totalReceivablesDec = new Decimal(0);
   let criticalReceivables = 0;
 
   for (const o of orders) {
     if (o.status !== "CANCELLED") {
-      totalRevenueDec = totalRevenueDec.plus(o.total_amount);
-      totalPaidDec = totalPaidDec.plus(o.paid_amount);
+      totalPaidDec = totalPaidDec.plus(o.paid_amount || 0);
 
       if (o.payment_status !== "PAID") {
-        criticalReceivables += 1;
+        const isMarketplace = ["Shopee", "TikTokShop", "Tokopedia"].includes(o.channel);
+        const netCollectible = isMarketplace
+          ? Decimal.max(0, new Decimal(o.total_amount).minus(o.platform_fee || 0))
+          : new Decimal(o.total_amount);
+        const rem = Decimal.max(0, netCollectible.minus(o.paid_amount || 0));
+        if (rem.greaterThan(0)) {
+          totalReceivablesDec = totalReceivablesDec.plus(rem);
+          criticalReceivables += 1;
+        }
       }
     }
   }
 
-  const totalReceivables = Decimal.max(0, totalRevenueDec.minus(totalPaidDec)).toNumber();
+  const totalReceivables = totalReceivablesDec.toNumber();
 
   // BEP Analysis based on current weighted average prices
   const fixedOverhead = expensesSummary.fixedCostsTotal || 820000;

@@ -105,7 +105,7 @@ const navigationSections: NavSection[] = [
         name: "Piutang Usaha",
         href: "/orders/receivables",
         icon: CreditCard,
-        badge: "Rp 655k",
+        badge: "Piutang",
       },
       {
         name: "Pengaturan Bisnis",

@@ -31,40 +31,30 @@ describe("Sprint 5 — Sales, Expenses, and Inventory Management Tests", () => {
   });
 
   describe("1. Receivables (Piutang) & Initial Balance Verification", () => {
-    it("should accurately reflect Rp 655.000 in receivables across 7 unpaid orders", async () => {
+    it("should accurately reflect Rp 280.000 in offline receivables across 2 unpaid orders", async () => {
       const summary = await getReceivablesSummary();
-      expect(summary.totalReceivables).toBe(655000);
-      expect(summary.totalReceivableOrdersCount).toBe(7);
-
-      // Verify specific receivable amounts
-      const mahput = summary.items.find((i) => i.customerName === "Mahput");
-      expect(mahput?.remainingAmount).toBe(130000);
-
-      const gress = summary.items.find((i) => i.customerName === "Gress");
-      expect(gress?.remainingAmount).toBe(115000);
+      expect(summary.totalReceivables).toBe(280000);
+      expect(summary.totalReceivableOrdersCount).toBe(2);
 
       const acilEly = summary.items.find((i) => i.customerName === "Acil Ely");
       expect(acilEly?.remainingAmount).toBe(130000);
 
       const pomiR10 = summary.items.find((i) => i.customerName.includes("Pelanggan Umum"));
       expect(pomiR10?.remainingAmount).toBe(150000);
-
-      const istriOmRidwan = summary.items.find((i) => i.customerName === "Istri Om Ridwan");
-      expect(istriOmRidwan?.remainingAmount).toBe(130000);
     });
 
-    it("should verify verified initial cash receipts of Rp 290.000 from Wahyu and Mama", async () => {
+    it("should verify verified offline cash receipts of Rp 840.000 across 6 paid orders", async () => {
       const payments = await getPayments();
       const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
-      expect(totalPaid).toBe(290000);
-      expect(payments.length).toBe(2);
+      expect(totalPaid).toBe(840000);
+      expect(payments.length).toBe(6);
 
-      const wahyuPay = payments.find((p) => p.order_id === "ord-08");
+      const wahyuPay = payments.find((p) => p.order_id === "ord-05");
       expect(wahyuPay?.amount).toBe(160000);
       expect(wahyuPay?.payment_method).toBe("TRANSFER");
 
-      const mamaPay = payments.find((p) => p.order_id === "ord-09");
+      const mamaPay = payments.find((p) => p.order_id === "ord-06");
       expect(mamaPay?.amount).toBe(130000);
       expect(mamaPay?.payment_method).toBe("CASH");
     });
@@ -72,12 +62,12 @@ describe("Sprint 5 — Sales, Expenses, and Inventory Management Tests", () => {
 
   describe("2. Payment Transactions & Multi-Stage Settlement (DP)", () => {
     it("should process a down payment (DP) and transition status to PARTIALLY_PAID", async () => {
-      // Mahput order is ord-01 with total 130.000
+      // Acil Ely order is ord-01 with total 130.000
       const payment1 = await createPayment({
         order_id: "ord-01",
         amount: 50000,
         payment_method: "TRANSFER",
-        reference_number: "TF-SHOPEE-DP01",
+        reference_number: "TF-DP01",
         notes: "Uang muka DP 50.000 via Transfer",
       });
 
@@ -90,7 +80,7 @@ describe("Sprint 5 — Sales, Expenses, and Inventory Management Tests", () => {
 
       // Remaining receivables should decrease by 50.000
       const recSummary = await getReceivablesSummary();
-      expect(recSummary.totalReceivables).toBe(605000); // 655k - 50k
+      expect(recSummary.totalReceivables).toBe(230000); // 280k - 50k
     });
 
     it("should settle remaining balance and transition status to PAID", async () => {
@@ -115,8 +105,8 @@ describe("Sprint 5 — Sales, Expenses, and Inventory Management Tests", () => {
       expect(updatedOrder?.paid_amount).toBe(130000);
 
       const recSummary = await getReceivablesSummary();
-      expect(recSummary.totalReceivables).toBe(525000); // 655k - 130k
-      expect(recSummary.totalReceivableOrdersCount).toBe(6); // 1 order is now fully settled
+      expect(recSummary.totalReceivables).toBe(150000); // 280k - 130k
+      expect(recSummary.totalReceivableOrdersCount).toBe(1); // 1 order remaining
     });
 
     it("should reject payment with zero or negative amount", async () => {

@@ -169,8 +169,8 @@ describe("Sprint 7 — End-to-End Integration & User Journey Verification", () =
     // TAHAP 9: Verifikasi Konsolidasi Laporan Laba Rugi
     // -------------------------------------------------------------
     const pnl = await getProfitLossStatement();
-    // Omzet total bertambah dari 945.000 + 290.000 = Rp 1.235.000
-    expect(pnl.grossRevenue).toBe(945000 + 290000);
+    // Omzet total bertambah dari 1.120.000 + 290.000 = Rp 1.410.000
+    expect(pnl.grossRevenue).toBe(1120000 + 290000);
     // HPP bertambah dari 2 unit Lumi (2 x 81182.4 = 162364.8)
     expect(pnl.cogs).toBeGreaterThan(814417.2);
     expect(pnl.grossProfit).toBeCloseTo(pnl.netRevenue - pnl.cogs, 2);
@@ -179,8 +179,8 @@ describe("Sprint 7 — End-to-End Integration & User Journey Verification", () =
     // TAHAP 10: Verifikasi Konsolidasi Laporan Arus Kas
     // -------------------------------------------------------------
     const cashFlow = await getCashFlowStatement();
-    // Kas masuk bertambah Rp 290.000 (dari 290k baseline menjadi 580k)
-    expect(cashFlow.operatingInflows.customerPayments).toBe(290000 + 290000);
+    // Kas masuk bertambah Rp 290.000 (dari 840k baseline offline menjadi 1.130k)
+    expect(cashFlow.operatingInflows.customerPayments).toBe(840000 + 290000);
   });
 
   it("should safely rollback stock if an in-production order is cancelled", async () => {
@@ -217,6 +217,6 @@ describe("Sprint 7 — End-to-End Integration & User Journey Verification", () =
 
     // Tidak boleh terhitung ke dalam omzet aktif
     const pnl = await getProfitLossStatement();
-    expect(pnl.grossRevenue).toBe(945000);
+    expect(pnl.grossRevenue).toBe(1120000);
   });
 });

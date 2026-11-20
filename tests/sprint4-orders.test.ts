@@ -19,20 +19,20 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
     resetMemoryPayments(true);
   });
 
-  describe("1. Historical Orders Integrity (Sheet: Orderan Casa Moral.xlsx)", () => {
-    it("should accurately reflect 9 historical orders totaling exactly Rp 945.000", async () => {
+  describe("1. Historical Orders Integrity (Offline / Direct Murni)", () => {
+    it("should accurately reflect 10 offline orders totaling exactly Rp 1.120.000", async () => {
       const orders = await getOrders();
-      expect(orders.length).toBe(9);
+      expect(orders.length).toBe(10);
 
       const totalVolume = orders.reduce((sum, o) => sum + o.total_amount, 0);
-      expect(totalVolume).toBe(945000);
+      expect(totalVolume).toBe(1120000);
     });
 
-    it("should accurately partition realized cash (Rp 290.000) and receivables (Rp 655.000)", async () => {
+    it("should accurately partition realized cash (Rp 840.000) and receivables (Rp 280.000)", async () => {
       const stats = await getOrderSummaryStats();
-      expect(stats.totalRevenue).toBe(945000);
-      expect(stats.totalPaid).toBe(290000);
-      expect(stats.totalReceivables).toBe(655000);
+      expect(stats.totalRevenue).toBe(1120000);
+      expect(stats.totalPaid).toBe(840000);
+      expect(stats.totalReceivables).toBe(280000);
     });
 
     it("should verify Wahyu's custom add-on order (Rp 130.000 + Rp 30.000 = Rp 160.000) is Lunas", async () => {
@@ -64,23 +64,23 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
       expect(displayKumo?.total_amount).toBe(0);
     });
 
-    it("should verify omnichannel channel split (8 Direct, 1 Shopee)", async () => {
+    it("should verify offline channel split (10 Direct, 0 Shopee in INITIAL_ORDERS)", async () => {
       const orders = await getOrders();
       const directOrders = orders.filter((o) => o.channel === "Direct");
       const shopeeOrders = orders.filter((o) => o.channel === "Shopee");
 
-      expect(directOrders.length).toBe(8);
-      expect(shopeeOrders.length).toBe(1);
+      expect(directOrders.length).toBe(10);
+      expect(shopeeOrders.length).toBe(0);
     });
 
     it("should fetch single order by ID or order_number using getOrderById", async () => {
-      const order = await getOrderById("ORD-2026-001");
+      const order = await getOrderById("ORD-OFF-001");
       expect(order).toBeDefined();
-      expect(order?.customer?.name).toBe("Mahput");
-      expect(order?.channel).toBe("Shopee");
+      expect(order?.customer?.name).toBe("Acil Ely");
+      expect(order?.channel).toBe("Direct");
 
       const byUuid = await getOrderById("ord-01");
-      expect(byUuid?.order_number).toBe("ORD-2026-001");
+      expect(byUuid?.order_number).toBe("ORD-OFF-001");
     });
   });
 
@@ -284,12 +284,11 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
     });
 
     it("should filter orders by channel, status, and search query", async () => {
-      const shopeeOnly = await getOrders({ channel: "Shopee" });
-      expect(shopeeOnly.length).toBe(1);
-      expect(shopeeOnly[0].customer?.name).toBe("Mahput");
+      const directOnly = await getOrders({ channel: "Direct" });
+      expect(directOnly.length).toBe(10);
 
       const paidOnly = await getOrders({ paymentStatus: "PAID" });
-      expect(paidOnly.length).toBe(2);
+      expect(paidOnly.length).toBe(8); // 6 Lunas + 2 Sampel Rp 0
 
       const searched = await getOrders({ search: "Acil Ely" });
       expect(searched.length).toBe(1);
@@ -406,10 +405,10 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
       // Baseline before creating test order
       const initialStats = await getOrderSummaryStats();
       const initialOrders = await getOrders();
-      expect(initialStats.totalOrders).toBe(9);
-      expect(initialStats.totalRevenue).toBe(945000);
-      expect(initialStats.totalPaid).toBe(290000);
-      expect(initialStats.totalReceivables).toBe(655000);
+      expect(initialStats.totalOrders).toBe(10);
+      expect(initialStats.totalRevenue).toBe(1120000);
+      expect(initialStats.totalPaid).toBe(840000);
+      expect(initialStats.totalReceivables).toBe(280000);
 
       // Create a new order: Rp 150.000 with DP Rp 50.000 (Piutang: Rp 100.000)
       const order = await createOrder({
@@ -430,10 +429,10 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
 
       // Verify stats increased
       const afterCreateStats = await getOrderSummaryStats();
-      expect(afterCreateStats.totalOrders).toBe(10);
-      expect(afterCreateStats.totalRevenue).toBe(945000 + 150000); // 1.095.000
-      expect(afterCreateStats.totalPaid).toBe(290000 + 50000);     // 340.000
-      expect(afterCreateStats.totalReceivables).toBe(655000 + 100000); // 755.000
+      expect(afterCreateStats.totalOrders).toBe(11);
+      expect(afterCreateStats.totalRevenue).toBe(1120000 + 150000);
+      expect(afterCreateStats.totalPaid).toBe(840000 + 50000);
+      expect(afterCreateStats.totalReceivables).toBe(280000 + 100000);
 
       // Also record an explicit payment for this order
       await createPayment({
@@ -461,14 +460,14 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
 
       // Verify financial metrics reset exactly back to initial values
       const afterDeleteStats = await getOrderSummaryStats();
-      expect(afterDeleteStats.totalOrders).toBe(9);
-      expect(afterDeleteStats.totalRevenue).toBe(945000);
-      expect(afterDeleteStats.totalPaid).toBe(290000);
-      expect(afterDeleteStats.totalReceivables).toBe(655000);
+      expect(afterDeleteStats.totalOrders).toBe(10);
+      expect(afterDeleteStats.totalRevenue).toBe(1120000);
+      expect(afterDeleteStats.totalPaid).toBe(840000);
+      expect(afterDeleteStats.totalReceivables).toBe(280000);
 
       // Verify orders list does not contain deleted order
       const finalOrders = await getOrders();
-      expect(finalOrders.length).toBe(9);
+      expect(finalOrders.length).toBe(10);
       expect(finalOrders.some((o) => o.id === order.id)).toBe(false);
     });
 

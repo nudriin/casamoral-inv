@@ -12,8 +12,8 @@ import { resetMemoryExpenses } from "../src/lib/services/expenses-service";
 
 describe("Sprint 6 — Reporting & Analytics Engine", () => {
   beforeEach(() => {
-    resetMemoryOrders(true);
-    resetMemoryPayments(true);
+    resetMemoryOrders(false);
+    resetMemoryPayments(false);
     resetMemoryExpenses(false);
   });
 
@@ -21,12 +21,12 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
     it("should compute accurate gross revenue, COGS, operating expenses, and net profit", async () => {
       const pl = await getProfitLossStatement();
 
-      // Total Omzet dari 9 pesanan historis = Rp 945.000
-      expect(pl.grossRevenue).toBe(945000);
-      expect(pl.discounts).toBe(15000);
-      expect(pl.platformFees).toBe(15600);
-      // Net Revenue setelah diskon promo dan fee Shopee = Rp 914.400
-      expect(pl.netRevenue).toBe(914400);
+      // Total Omzet dari 24 pesanan konsolidasi = Rp 3.595.000
+      expect(pl.grossRevenue).toBe(3595000);
+      expect(pl.discounts).toBe(0);
+      expect(pl.platformFees).toBe(402189);
+      // Net Revenue setelah fee Shopee = Rp 3.192.811
+      expect(pl.netRevenue).toBe(3192811);
 
       // COGS snapshot total harus lebih besar dari 0 dan konsisten
       expect(pl.cogs).toBeGreaterThan(0);
@@ -56,9 +56,9 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
     it("should accurately track operational inflows, investing, and financing flows", async () => {
       const cf = await getCashFlowStatement();
 
-      // Kas masuk operasional dari pembayaran 2 pesanan = Rp 290.000
-      expect(cf.operatingInflows.customerPayments).toBe(290000);
-      expect(cf.operatingInflows.total).toBe(290000);
+      // Kas masuk operasional dari pembayaran konsolidasi = Rp 2.076.311 (840k Offline + 1.236.311 Shopee Dilepas)
+      expect(cf.operatingInflows.customerPayments).toBe(2076311);
+      expect(cf.operatingInflows.total).toBe(2076311);
 
       // Kas keluar operasional mencakup beban kas yang dibayarkan dan pembelian bahan
       expect(cf.operatingOutflows.operatingExpensesPaid).toBeGreaterThan(0);
@@ -76,16 +76,18 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
     it("should aggregate units, revenues, margins, and printing hours per product model", async () => {
       const analytics = await getSalesAnalytics();
 
-      expect(analytics.totalOrders).toBe(9);
-      expect(analytics.totalRevenue).toBe(945000);
-      expect(analytics.totalUnitsSold).toBe(9);
+      expect(analytics.totalOrders).toBe(24);
+      expect(analytics.totalRevenue).toBe(3595000);
+      expect(analytics.totalUnitsSold).toBe(27);
 
-      // Verifikasi 4 model lampu
+      // Verifikasi model lampu termasuk Lyra & Nomi
       const modelNames = analytics.products.map((p) => p.name);
       expect(modelNames.some((n) => n.includes("Lumi"))).toBe(true);
       expect(modelNames.some((n) => n.includes("Ollie"))).toBe(true);
       expect(modelNames.some((n) => n.includes("Kumo"))).toBe(true);
       expect(modelNames.some((n) => n.includes("Pomi"))).toBe(true);
+      expect(modelNames.some((n) => n.includes("Lyra"))).toBe(true);
+      expect(modelNames.some((n) => n.includes("Nomi"))).toBe(true);
 
       // Setiap produk memiliki snapshot HPP, margin, dan estimasi jam cetak
       for (const prod of analytics.products) {
@@ -109,8 +111,8 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
       const shopeeChannel = analytics.channels.find((c) => c.channel === "Shopee");
       expect(directChannel).toBeDefined();
       expect(shopeeChannel).toBeDefined();
-      expect(directChannel?.ordersCount).toBe(8);
-      expect(shopeeChannel?.ordersCount).toBe(1);
+      expect(directChannel?.ordersCount).toBe(10);
+      expect(shopeeChannel?.ordersCount).toBe(14);
 
       // Add-on Lee Jeno
       const leeJenoAddon = analytics.addOns.find((a) => a.name.includes("Lee Jeno"));
@@ -123,13 +125,13 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
     it("should compute real KPIs and realistic BEP targets", async () => {
       const dash = await getExecutiveDashboardMetrics();
 
-      expect(dash.kpis.totalRevenue).toBe(945000);
-      expect(dash.kpis.totalCashReceived).toBe(290000);
-      expect(dash.kpis.totalReceivables).toBe(655000);
+      expect(dash.kpis.totalRevenue).toBe(3595000);
+      expect(dash.kpis.totalCashReceived).toBe(2076311);
+      expect(dash.kpis.totalReceivables).toBe(1116500);
       expect(dash.kpis.totalExpenses).toBe(1211091);
 
-      // Piutang belum lunas ada 7 pesanan
-      expect(dash.criticalReceivablesCount).toBe(7);
+      // Piutang belum lunas + Shopee pending = 6 pesanan
+      expect(dash.criticalReceivablesCount).toBe(6);
 
       // BEP Target
       expect(dash.bepTracking.monthlyFixedOverhead).toBe(1211091);

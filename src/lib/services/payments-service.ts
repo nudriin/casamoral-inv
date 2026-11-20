@@ -181,11 +181,14 @@ export async function getReceivablesSummary(): Promise<ReceivablesSummary> {
     if (ord.status === "CANCELLED") continue;
 
     const total = new Decimal(ord.total_amount);
+    const fee = new Decimal(ord.platform_fee || 0);
+    const isMarketplace = ["Shopee", "TikTokShop", "Tokopedia"].includes(ord.channel);
+    const netCollectible = isMarketplace ? Decimal.max(0, total.minus(fee)) : total;
     const paid = new Decimal(ord.paid_amount || 0);
-    const remaining = total.minus(paid);
+    const remaining = ord.payment_status === "PAID" ? new Decimal(0) : Decimal.max(0, netCollectible.minus(paid));
 
-    // If there is an unpaid balance (even if remaining > 0 or status UNPAID)
-    if (ord.payment_status !== "PAID" || remaining.greaterThan(0)) {
+    // Only include orders that are unpaid or partially paid
+    if (ord.payment_status !== "PAID" && remaining.greaterThan(0)) {
       totalReceivablesDec = totalReceivablesDec.plus(remaining);
 
       const orderTime = new Date(ord.order_date).getTime();
