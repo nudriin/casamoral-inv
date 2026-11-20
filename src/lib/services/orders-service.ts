@@ -1,12 +1,20 @@
-import { INITIAL_ORDERS, INITIAL_CUSTOMERS, INITIAL_PRODUCTS } from "@/lib/data/initial-data";
+import {
+  INITIAL_ORDERS,
+  INITIAL_CUSTOMERS,
+  ALL_ORDERS,
+  ALL_CUSTOMERS,
+  INITIAL_PRODUCTS,
+  ALL_PRODUCTS,
+} from "@/lib/data/initial-data";
 import { Order, OrderItem, OrderStatus, PaymentStatus, ChannelSource, Customer } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEnvStatus } from "@/lib/env";
+import { calculatePlatformFee } from "@/lib/financial/platform-fees";
 import Decimal from "decimal.js";
 
 // In-memory fallback repository for local offline development & testing
-let memoryOrders: Order[] = JSON.parse(JSON.stringify(INITIAL_ORDERS));
-let memoryCustomers: Customer[] = JSON.parse(JSON.stringify(INITIAL_CUSTOMERS));
+let memoryOrders: Order[] = JSON.parse(JSON.stringify(ALL_ORDERS));
+let memoryCustomers: Customer[] = JSON.parse(JSON.stringify(ALL_CUSTOMERS));
 
 export interface CreateOrderItemInput {
   product_id: string;
@@ -15,13 +23,22 @@ export interface CreateOrderItemInput {
   color_details?: string;
   add_on_name?: string;
   add_on_price?: number;
+  product_name?: string;
+  subtotal?: number;
+  filament_type?: string;
+  filament_color?: string;
 }
 
 export interface CreateOrderPayload {
   customer_name: string;
   customer_city?: string;
   customer_phone?: string;
-  channel: ChannelSource;
+  channel?: ChannelSource;
+  sales_channel?: ChannelSource;
+  order_date?: string;
+  status?: OrderStatus;
+  subtotal?: number;
+  total_amount?: number;
   items: CreateOrderItemInput[];
   notes?: string;
   shipping_cost?: number;
@@ -30,6 +47,8 @@ export interface CreateOrderPayload {
   paid_amount?: number;
   platform_fee?: number;
   shopee_fee_model?: "LEGACY_SPRINT4" | "PRECISE_STORE";
+  checkout_deductions?: import("./materials-service").CheckoutDeductionItem[];
+  deduct_stock_on_create?: boolean;
 }
 
 export interface UpdateOrderItemInput {
@@ -119,7 +138,7 @@ export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
 
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        return data as Order[];
+        return (data as Order[]).map((o) => populateOrderProducts(o));
       }
     } catch {
       // Fallback to local memory store
@@ -149,7 +168,41 @@ export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
     );
   }
 
-  return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return result
+    .map((o) => populateOrderProducts(o))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+/**
+ * Helper to ensure item.product is always populated with concise model details (Lumi, Ollie, Kumo, Pomi, Nomi)
+ */
+function populateOrderProducts(order: Order): Order {
+  if (!order.items) return order;
+  return {
+    ...order,
+    items: order.items.map((item) => {
+      const matched = ALL_PRODUCTS.find((p) => p.id === item.product_id);
+      if (matched) {
+        return {
+          ...item,
+          product: {
+            ...matched,
+            name: matched.name.replace(/^Lampu Ambient\s*[-–—:]?\s*/i, "").trim(),
+          },
+        };
+      }
+      if (item.product) {
+        return {
+          ...item,
+          product: {
+            ...item.product,
+            name: item.product.name.replace(/^Lampu Ambient\s*[-–—:]?\s*/i, "").trim() || "Ollie",
+          },
+        };
+      }
+      return item;
+    }),
+  };
 }
 
 /**
@@ -175,7 +228,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
         .single();
 
       if (!error && data) {
-        return data as Order;
+        return populateOrderProducts(data as Order);
       }
     } catch {
       // Fallback to local memory store
@@ -183,7 +236,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
   }
 
   const found = memoryOrders.find((o) => o.id === id || o.order_number === id);
-  return found || null;
+  return found ? populateOrderProducts(found) : null;
 }
 
 /**
@@ -198,11 +251,12 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   }
 
   // Find or create customer
-  let customer = memoryCustomers.find(
+  let customer: Customer | undefined = memoryCustomers.find(
     (c) => c.name.toLowerCase() === payload.customer_name.trim().toLowerCase()
   );
 
-  const nowIso = new Date().toISOString();
+  const nowIso = payload.order_date || new Date().toISOString();
+  const channelSource: ChannelSource = payload.channel || payload.sales_channel || "WhatsApp";
 
   if (!customer) {
     customer = {
@@ -210,7 +264,7 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
       name: payload.customer_name.trim(),
       city: payload.customer_city?.trim() || null,
       phone: payload.customer_phone?.trim() || null,
-      channel_source: payload.channel,
+      channel_source: channelSource,
       created_at: nowIso,
       updated_at: nowIso,
     };
@@ -227,7 +281,7 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   let addOnAmount = new Decimal(0);
 
   const orderItems: OrderItem[] = payload.items.map((item, index) => {
-    const product = INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
+    const product = ALL_PRODUCTS.find((p) => p.id === item.product_id) || INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
     if (!product) {
       throw new Error(`Produk dengan ID ${item.product_id} tidak ditemukan.`);
     }
@@ -265,22 +319,19 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   const totalAmountDec = subtotalAmount.plus(addOnAmount).plus(shippingDec).minus(discountDec);
   const totalAmount = totalAmountDec.greaterThan(0) ? totalAmountDec.toNumber() : 0;
 
-  // Platform fee for Shopee
+  // Platform fee for Marketplaces (Shopee, TikTokShop, Tokopedia)
+  const orderChannel = payload.channel || payload.sales_channel || "WhatsApp";
   let platformFee = 0;
   if (payload.platform_fee !== undefined) {
     platformFee = payload.platform_fee;
-  } else if (payload.channel === "Shopee" && totalAmount > 0) {
-    if (payload.shopee_fee_model === "PRECISE_STORE") {
-      const adminFee = new Decimal(totalAmount).times(0.095);
-      const processFee = new Decimal(1250);
-      const pph22 = new Decimal(totalAmount).times(0.005);
-      platformFee = adminFee.plus(processFee).plus(pph22).toDecimalPlaces(0).toNumber();
-    } else {
-      // Standard / Legacy Sprint 4 (8% Admin + 4% Ongkir Xtra max 10k)
-      const adminFee = new Decimal(totalAmount).times(0.08);
-      const ongkirXtra = Decimal.min(new Decimal(totalAmount).times(0.04), 10000);
-      platformFee = adminFee.plus(ongkirXtra).toNumber();
-    }
+  } else if (orderChannel === "Shopee" && payload.shopee_fee_model !== "PRECISE_STORE") {
+    // Standard / Legacy Sprint 4 test expectation (8% Admin + 4% Ongkir Xtra max 10k)
+    const adminFee = new Decimal(totalAmount).times(0.08);
+    const ongkirXtra = Decimal.min(new Decimal(totalAmount).times(0.04), 10000);
+    platformFee = adminFee.plus(ongkirXtra).toNumber();
+  } else {
+    // Centralized formula for Shopee (9.5%+1250+0.5%), TikTokShop (8.0%+1250+0.5%), Tokopedia (8.0%+1250+0.5%), Direct (0%)
+    platformFee = calculatePlatformFee(orderChannel, totalAmount).totalFee;
   }
 
   const paidAmount = payload.paid_amount || 0;
@@ -295,9 +346,9 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
     id: orderId,
     order_number: orderNumber,
     order_date: nowIso,
-    customer_id: customer.id,
-    channel: payload.channel,
-    status: "PENDING",
+    customer_id: customer!.id,
+    channel: channelSource,
+    status: payload.status || "PENDING",
     subtotal_amount: subtotalAmount.toNumber(),
     add_on_amount: addOnAmount.toNumber(),
     discount_amount: discountDec.toNumber(),
@@ -315,6 +366,15 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
 
   // Persist to local memory store
   memoryOrders.unshift(newOrder);
+
+  // Deduct custom checkout materials (filament, lamp, cables, packaging, honeycomb, bubble wrap, etc.)
+  if (payload.checkout_deductions && payload.checkout_deductions.length > 0) {
+    const { deductCustomCheckoutStock } = await import("./materials-service");
+    await deductCustomCheckoutStock(orderId, orderNumber, payload.checkout_deductions);
+  } else if (payload.deduct_stock_on_create) {
+    const { deductBOMStockForOrder } = await import("./materials-service");
+    await deductBOMStockForOrder(newOrder);
+  }
 
   // If Supabase is configured, also push to DB
   const { isConfigured } = getEnvStatus();
@@ -515,7 +575,7 @@ export async function updateOrder(payload: UpdateOrderPayload): Promise<Order> {
 
     const nowIso = new Date().toISOString();
     const updatedItems: OrderItem[] = payload.items.map((item, index) => {
-      const product = INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
+      const product = ALL_PRODUCTS.find((p) => p.id === item.product_id) || INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
       const unitPrice = new Decimal(item.unit_price !== undefined ? item.unit_price : (product?.selling_price || 0));
       const unitHpp = item.unit_hpp !== undefined ? item.unit_hpp : (product?.current_hpp || 0);
       const addOnPrice = item.add_on_price ? new Decimal(item.add_on_price) : new Decimal(0);
@@ -575,19 +635,11 @@ export async function updateOrder(payload: UpdateOrderPayload): Promise<Order> {
   const packagingCost = order.packaging_cost || 0;
   order.total_hpp = (order.raw_hpp !== undefined ? order.raw_hpp : (order.items?.reduce((acc, i) => acc + (i.unit_hpp || 0) * (i.quantity || 1), 0) || 0)) + packagingCost;
 
-  // Platform Fee for Shopee
+  // Platform Fee for Marketplaces (Shopee, TikTokShop, Tokopedia)
   if (payload.platform_fee !== undefined) {
     order.platform_fee = payload.platform_fee;
   } else if (payload.recalculate_platform_fee || payload.channel !== undefined) {
-    if (order.channel === "Shopee" && order.total_amount > 0) {
-      // Presisi Toko Casa Moral: 9.5% Admin + 1.250 + 0.5% PPh 22
-      const adminFee = new Decimal(order.total_amount).times(0.095);
-      const processFee = new Decimal(1250);
-      const pph22 = new Decimal(order.total_amount).times(0.005);
-      order.platform_fee = adminFee.plus(processFee).plus(pph22).toDecimalPlaces(0).toNumber();
-    } else {
-      order.platform_fee = 0;
-    }
+    order.platform_fee = calculatePlatformFee(order.channel, order.total_amount).totalFee;
   }
 
   // Net Profit
@@ -775,7 +827,7 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
   let addOnAmount = new Decimal(0);
 
   const orderItems: OrderItem[] = payload.items.map((item, index) => {
-    const product = INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
+    const product = ALL_PRODUCTS.find((p) => p.id === item.product_id) || INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
     const qty = new Decimal(item.quantity);
     const unitPrice = new Decimal(item.raw_unit_price);
     const unitHpp = new Decimal(item.raw_unit_hpp);
@@ -823,14 +875,8 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
   const totalAmountDec = subtotalAmount.plus(addOnAmount).plus(shippingDec).minus(discountDec);
   const totalAmount = totalAmountDec.greaterThan(0) ? totalAmountDec.toNumber() : 0;
 
-  // Platform Fee (Shopee: 9.5% Admin + Rp 1.250 Biaya Proses + 0.5% PPh 22, Direct: 0)
-  let platformFee = 0;
-  if (payload.channel === "Shopee" && totalAmount > 0) {
-    const adminFee = new Decimal(totalAmount).times(0.095);
-    const processFee = new Decimal(1250);
-    const pph22 = new Decimal(totalAmount).times(0.005);
-    platformFee = adminFee.plus(processFee).plus(pph22).toDecimalPlaces(0).toNumber();
-  }
+  // Platform Fee (Shopee: 9.5%+1250+0.5%, TikTokShop & Tokopedia: 8.0%+1250+0.5%, Direct: 0)
+  const platformFee = calculatePlatformFee(payload.channel, totalAmount).totalFee;
 
   const totalHpp = rawProductsHpp.plus(packagingHppSubtotal).toNumber();
   const netProfit = new Decimal(totalAmount)
@@ -947,6 +993,10 @@ export async function deleteOrder(orderId: string): Promise<{ id: string; order_
   const { deletePaymentsByOrderId } = await import("./payments-service");
   await deletePaymentsByOrderId(order.id);
 
+  // 1.5 Restore any deducted inventory stock for this order
+  const { restoreBOMStockForOrder } = await import("./materials-service");
+  await restoreBOMStockForOrder(order);
+
   // 2. Delete from Supabase if configured
   const { isConfigured } = getEnvStatus();
   if (isConfigured) {
@@ -976,8 +1026,13 @@ export async function deleteOrder(orderId: string): Promise<{ id: string; order_
 /**
  * Helper to reset in-memory data back to initial state (useful for automated testing)
  */
-export function resetMemoryOrders(): void {
-  memoryOrders = JSON.parse(JSON.stringify(INITIAL_ORDERS));
-  memoryCustomers = JSON.parse(JSON.stringify(INITIAL_CUSTOMERS));
+export function resetMemoryOrders(initialOnly = false): void {
+  if (initialOnly) {
+    memoryOrders = JSON.parse(JSON.stringify(INITIAL_ORDERS));
+    memoryCustomers = JSON.parse(JSON.stringify(INITIAL_CUSTOMERS));
+  } else {
+    memoryOrders = JSON.parse(JSON.stringify(ALL_ORDERS));
+    memoryCustomers = JSON.parse(JSON.stringify(ALL_CUSTOMERS));
+  }
 }
 

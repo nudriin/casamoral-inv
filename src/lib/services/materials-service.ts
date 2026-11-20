@@ -1,4 +1,11 @@
-import { INITIAL_MATERIALS, INITIAL_STOCK_MOVEMENTS, INITIAL_PRODUCTS } from "@/lib/data/initial-data";
+import {
+  INITIAL_MATERIALS,
+  INITIAL_STOCK_MOVEMENTS,
+  STORE_STOCK_MOVEMENTS,
+  ALL_STOCK_MOVEMENTS,
+  INITIAL_PRODUCTS,
+  ALL_PRODUCTS,
+} from "@/lib/data/initial-data";
 import { Material, StockMovement, StockMovementType, Order } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEnvStatus } from "@/lib/env";
@@ -6,7 +13,7 @@ import Decimal from "decimal.js";
 
 // In-memory store for fallback & testing
 let memoryMaterials: Material[] = JSON.parse(JSON.stringify(INITIAL_MATERIALS));
-let memoryMovements: StockMovement[] = JSON.parse(JSON.stringify(INITIAL_STOCK_MOVEMENTS));
+let memoryMovements: StockMovement[] = JSON.parse(JSON.stringify(ALL_STOCK_MOVEMENTS));
 
 export interface CreateStockMovementPayload {
   material_id: string;
@@ -36,6 +43,14 @@ export async function getMaterials(): Promise<Material[]> {
   }
 
   return memoryMaterials;
+}
+
+/**
+ * Fetch a single material by ID
+ */
+export async function getMaterialById(id: string): Promise<Material | undefined> {
+  const materials = await getMaterials();
+  return materials.find((m) => m.id === id);
 }
 
 /**
@@ -141,7 +156,7 @@ export async function deductBOMStockForOrder(order: Order): Promise<StockMovemen
   const generatedMovements: StockMovement[] = [];
 
   for (const item of order.items) {
-    const product = INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
+    const product = ALL_PRODUCTS.find((p) => p.id === item.product_id) || INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
     if (!product || !product.bom) continue;
 
     const qty = item.quantity || 1;
@@ -441,12 +456,103 @@ export async function deductPackagingStockForOrder(
   return movements;
 }
 
+export interface CheckoutDeductionItem {
+  material_id: string;
+  name: string;
+  quantity: number; // positive number to deduct
+  unit?: string;
+}
+
+/**
+ * Deducts custom selected materials (filament, lamp, cable, box, honeycomb, bubble wrap, etc.)
+ * chosen by user during checkout
+ */
+export async function deductCustomCheckoutStock(
+  orderId: string,
+  orderNumber: string,
+  deductions: CheckoutDeductionItem[]
+): Promise<StockMovement[]> {
+  const generatedMovements: StockMovement[] = [];
+
+  for (const item of deductions) {
+    if (!item.material_id || item.quantity <= 0) continue;
+    const mov = await recordStockMovement({
+      material_id: item.material_id,
+      movement_type: "PRODUCTION_USAGE",
+      quantity: -item.quantity,
+      reference_id: orderId,
+      notes: `Checkout ${orderNumber}: Pemakaian ${item.quantity} ${item.unit || ""} ${item.name}`,
+    });
+    generatedMovements.push(mov);
+  }
+
+  return generatedMovements;
+}
+
+export interface AdjustMaterialStockPayload {
+  material_id: string;
+  physical_stock: number;
+  reason: string;
+  notes?: string;
+}
+
+/**
+ * Adjust stock to match physical stock opname results
+ */
+export async function adjustMaterialStock(
+  payload: AdjustMaterialStockPayload
+): Promise<{ material: Material; movement: StockMovement; difference: number }> {
+  const materials = await getMaterials();
+  const material = materials.find((m) => m.id === payload.material_id);
+  if (!material) {
+    throw new Error(`Bahan baku dengan ID "${payload.material_id}" tidak ditemukan.`);
+  }
+
+  const systemStock = material.current_stock;
+  const targetStock = Math.max(0, payload.physical_stock);
+  const difference = new Decimal(targetStock).minus(systemStock).toNumber();
+
+  if (difference === 0) {
+    return { material, movement: null as any, difference: 0 };
+  }
+
+  const movementType: StockMovementType = difference < 0 ? "WASTE_ADJUSTMENT" : "MANUAL_CORRECTION";
+  const notes = `Penyesuaian Stock Opname: ${payload.reason}${payload.notes ? ` (${payload.notes})` : ""} [Sistem: ${systemStock} ${material.unit} -> Fisik: ${targetStock} ${material.unit}, Selisih: ${difference > 0 ? "+" : ""}${difference} ${material.unit}]`;
+
+  const movement = await recordStockMovement({
+    material_id: material.id,
+    movement_type: movementType,
+    quantity: difference,
+    notes,
+  });
+
+  material.current_stock = targetStock;
+  material.updated_at = new Date().toISOString();
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      await supabase
+        .from("materials")
+        .update({ current_stock: targetStock, updated_at: material.updated_at })
+        .eq("id", material.id);
+    } catch {
+      // Fallback
+    }
+  }
+
+  return { material, movement, difference };
+}
+
 /**
  * Reset memory materials and movements (for automated testing isolation)
  */
-export function resetMemoryMaterials(): void {
+export function resetMemoryMaterials(initialOnly = false): void {
   memoryMaterials = JSON.parse(JSON.stringify(INITIAL_MATERIALS));
-  memoryMovements = JSON.parse(JSON.stringify(INITIAL_STOCK_MOVEMENTS));
+  memoryMovements = JSON.parse(
+    JSON.stringify(initialOnly ? INITIAL_STOCK_MOVEMENTS : ALL_STOCK_MOVEMENTS)
+  );
 }
 
 

@@ -2,8 +2,9 @@ import Decimal from "decimal.js";
 import { getOrders } from "./orders-service";
 import { getPayments } from "./payments-service";
 import { getExpenses, getExpensesSummary } from "./expenses-service";
-import { INITIAL_PRODUCTS, INITIAL_CAPITAL_PURCHASES } from "@/lib/data/initial-data";
+import { INITIAL_PRODUCTS, ALL_CAPITAL_PURCHASES } from "@/lib/data/initial-data";
 import { calculateBEP } from "@/lib/financial/bep-calculator";
+import { formatModelName } from "@/lib/utils";
 
 export interface ProfitLossStatement {
   period: string;
@@ -171,7 +172,7 @@ export async function getProfitLossStatement(): Promise<ProfitLossStatement> {
     : operatingProfitDec.dividedBy(netRevenueDec).times(100).toDecimalPlaces(2).toNumber();
 
   return {
-    period: "Agustus - Oktober 2026",
+    period: "September - November 2026",
     grossRevenue: grossRevDec.toNumber(),
     discounts: discountsDec.toNumber(),
     shippingCollected: shippingDec.toNumber(),
@@ -216,20 +217,20 @@ export async function getCashFlowStatement(): Promise<CashFlowStatement> {
   }
 
   // Capital purchases categorized as Materials (Filamen + Kelistrikan + Kemasan)
-  const materialPurchasesTotal = INITIAL_CAPITAL_PURCHASES
+  const materialPurchasesTotal = ALL_CAPITAL_PURCHASES
     .filter((c) => ["FILAMEN", "KELISTRIKAN", "KEMASAN"].includes(c.category))
     .reduce((sum, item) => sum + item.totalCost, 0);
 
   const totalOperatingOutflowsDec = cashExpensesDec.plus(materialPurchasesTotal);
   const netOperatingCashDec = totalPaymentsDec.minus(totalOperatingOutflowsDec);
 
-  // 3. Investing Cash Flow = Purchase of Fixed Assets (Mesin 3D printer)
-  const fixedAssetsTotal = INITIAL_CAPITAL_PURCHASES
+  // 3. Investing Cash Flow = Purchase of Fixed Assets (Mesin 3D printer & Alat)
+  const fixedAssetsTotal = ALL_CAPITAL_PURCHASES
     .filter((c) => ["MESIN", "ALAT"].includes(c.category))
     .reduce((sum, item) => sum + item.totalCost, 0);
 
   // 4. Financing Cash Flow = Initial Owner Equity Injected
-  const initialEquity = INITIAL_CAPITAL_PURCHASES.reduce((sum, item) => sum + item.totalCost, 0);
+  const initialEquity = ALL_CAPITAL_PURCHASES.reduce((sum, item) => sum + item.totalCost, 0);
 
   // Ending Cash Balance = Owner Equity + Net Operating - Fixed Assets
   const endingCashDec = new Decimal(initialEquity)
@@ -239,7 +240,7 @@ export async function getCashFlowStatement(): Promise<CashFlowStatement> {
     .plus(totalPaymentsDec);
 
   return {
-    period: "Agustus - Oktober 2026",
+    period: "September - November 2026",
     operatingInflows: {
       customerPayments: totalPaymentsDec.toNumber(),
       total: totalPaymentsDec.toNumber(),
@@ -321,7 +322,7 @@ export async function getSalesAnalytics(): Promise<SalesAnalytics> {
       if (!productMap[pid]) {
         productMap[pid] = {
           id: pid,
-          name: item.product?.name || "Lampu Ambient",
+          name: formatModelName(item),
           sku: item.product?.sku || "CM-LAMP",
           units: 0,
           revenue: new Decimal(0),

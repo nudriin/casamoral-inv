@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { Order, OrderStatus, PaymentStatus, Product } from "@/types/database";
 import { ProductWithBOM } from "@/lib/data/initial-data";
-import { formatRupiah, formatDateIndo } from "@/lib/utils";
+import { formatRupiah, formatDateIndo, formatModelName } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,11 +147,24 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
   };
 
   const getChannelBadge = (channel: string) => {
-    switch (channel.toLowerCase()) {
+    switch (channel.toLowerCase().replace(/\s+/g, "")) {
       case "shopee":
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-800">
             Shopee
+          </span>
+        );
+      case "tiktokshop":
+      case "tiktok":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-zinc-900 text-zinc-100 border border-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:border-zinc-300">
+            TikTok Shop
+          </span>
+        );
+      case "tokopedia":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+            Tokopedia
           </span>
         );
       case "whatsapp":
@@ -198,17 +211,23 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
               <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1">
                 <Filter className="w-3 h-3" /> Kanal:
               </span>
-              {(["ALL", "Direct", "Shopee"] as const).map((ch) => (
+              {[
+                { key: "ALL", label: "Semua" },
+                { key: "Direct", label: "Direct" },
+                { key: "Shopee", label: "Shopee" },
+                { key: "TikTokShop", label: "TikTok Shop" },
+                { key: "Tokopedia", label: "Tokopedia" },
+              ].map((ch) => (
                 <button
-                  key={ch}
-                  onClick={() => setChannelFilter(ch)}
+                  key={ch.key}
+                  onClick={() => setChannelFilter(ch.key)}
                   className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
-                    channelFilter === ch
+                    channelFilter.toLowerCase() === ch.key.toLowerCase()
                       ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
                       : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
                   }`}
                 >
-                  {ch === "ALL" ? "Semua" : ch}
+                  {ch.label}
                 </button>
               ))}
             </div>
@@ -335,10 +354,10 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                       <td className="py-3 px-4 align-top">
                         {firstItem ? (
                           <div className="space-y-1">
-                            <div className="font-medium text-zinc-800 dark:text-zinc-200">
-                              {firstItem.product?.name || "Lampu Ambient"}
+                            <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                              {formatModelName(firstItem)}
                               {firstItem.quantity > 1 && (
-                                <span className="ml-1 text-xs text-zinc-500">
+                                <span className="ml-1 text-xs text-zinc-500 font-normal">
                                   ({firstItem.quantity} unit)
                                 </span>
                               )}

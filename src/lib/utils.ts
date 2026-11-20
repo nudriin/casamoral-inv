@@ -56,3 +56,72 @@ export function formatDate(date: string | Date | null | undefined): string {
 }
 
 export const formatDateIndo = formatDate;
+
+/**
+ * Clean & display concise product model name (e.g. "Ollie", "Lumi", "Kumo", "Pomi", "Nomi")
+ * Avoids confusing generic "Lampu Ambient" fallback.
+ */
+export function formatModelName(
+  itemOrProduct?:
+    | {
+        product?: { name?: string | null } | null;
+        product_id?: string | null;
+        id?: string | null;
+        name?: string | null;
+        product_name?: string | null;
+        color_details?: string | null;
+      }
+    | string
+    | null
+): string {
+  if (!itemOrProduct) return "Ollie";
+
+  const knownMap: Record<string, string> = {
+    "prod-01": "Lumi",
+    "prod-02": "Ollie",
+    "prod-03": "Kumo",
+    "prod-04": "Pomi",
+    "prod-05": "Nomi",
+  };
+
+  if (typeof itemOrProduct === "object") {
+    const id = itemOrProduct.product_id || (itemOrProduct as any).id;
+    if (id && knownMap[id]) {
+      return knownMap[id];
+    }
+
+    const raw =
+      itemOrProduct.product?.name ||
+      itemOrProduct.product_name ||
+      itemOrProduct.name ||
+      "";
+
+    if (raw && typeof raw === "string") {
+      const clean = raw
+        .replace(/^Lampu Ambient\s*[-–—:]?\s*/i, "")
+        .replace(/Lampu Ambient/gi, "")
+        .replace(/^Model\s+/i, "")
+        .trim();
+      if (clean && clean.toLowerCase() !== "lampu ambient") {
+        return clean;
+      }
+    }
+
+    if (itemOrProduct.color_details) {
+      const cd = itemOrProduct.color_details.toLowerCase();
+      if (cd.includes("cap")) {
+        return "Ollie";
+      }
+    }
+
+    return "Ollie";
+  }
+
+  const clean = String(itemOrProduct)
+    .replace(/^Lampu Ambient\s*[-–—:]?\s*/i, "")
+    .replace(/Lampu Ambient/gi, "")
+    .replace(/^Model\s+/i, "")
+    .trim();
+  return clean && clean.toLowerCase() !== "lampu ambient" ? clean : "Ollie";
+}
+

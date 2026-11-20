@@ -13,7 +13,7 @@ export interface Profile {
   updated_at: string;
 }
 
-export type ChannelSource = "Direct" | "Shopee" | "WhatsApp" | "Instagram" | "Other";
+export type ChannelSource = "Direct" | "Shopee" | "TikTokShop" | "Tokopedia" | "WhatsApp" | "Instagram" | "Other";
 
 export interface Customer {
   id: string;
@@ -27,7 +27,7 @@ export interface Customer {
 }
 
 export type MaterialCategory = "filament" | "electrical" | "packaging" | "hardware" | "other";
-export type MaterialUnit = "gram" | "pcs" | "meter" | "roll";
+export type MaterialUnit = "gram" | "pcs" | "meter" | "roll" | "cm";
 
 export interface Material {
   id: string;

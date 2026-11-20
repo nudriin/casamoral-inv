@@ -49,6 +49,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
       KELISTRIKAN: { label: "Komponen Kelistrikan & Lampu", total: 0, count: 0 },
       KEMASAN: { label: "Kemasan & Packaging", total: 0, count: 0 },
       ALAT: { label: "Peralatan & Tools", total: 0, count: 0 },
+      OPERASIONAL: { label: "Iklan, Software & Operasional", total: 0, count: 0 },
     };
 
     newPurchases.forEach((item) => {
@@ -233,7 +234,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             {summary.breakdown.map((b) => (
               <div
                 key={b.category}
@@ -392,7 +393,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
               />
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-              {["ALL", "MESIN", "FILAMEN", "KELISTRIKAN", "KEMASAN", "ALAT"].map((cat) => (
+              {["ALL", "MESIN", "FILAMEN", "KELISTRIKAN", "KEMASAN", "ALAT", "OPERASIONAL"].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
@@ -413,6 +414,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
               <thead className="sticky top-0 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 z-10">
                 <tr>
                   <th className="py-3 px-4 font-semibold w-12 text-center">No</th>
+                  <th className="py-3 px-4 font-semibold">Tanggal</th>
                   <th className="py-3 px-4 font-semibold">Nama Barang / Transaksi</th>
                   <th className="py-3 px-4 font-semibold">Kategori</th>
                   <th className="py-3 px-4 font-semibold text-right">Harga Satuan</th>
@@ -427,8 +429,14 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                     <td className="py-2.5 px-4 text-center text-zinc-400 font-mono text-[11px]">
                       {index + 1}
                     </td>
+                    <td className="py-2.5 px-4 font-mono text-[11px] text-zinc-500 whitespace-nowrap">
+                      {item.purchaseDate || "-"}
+                    </td>
                     <td className="py-2.5 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                      {item.name}
+                      <div>{item.name}</div>
+                      {item.account && (
+                        <span className="text-[10px] font-normal text-zinc-400">Akun: {item.account}</span>
+                      )}
                     </td>
                     <td className="py-2.5 px-4">
                       <Badge variant="outline" className="text-[10px]">
@@ -655,6 +663,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                   <option value="KELISTRIKAN">KELISTRIKAN (Komponen)</option>
                   <option value="KEMASAN">KEMASAN (Packaging)</option>
                   <option value="ALAT">ALAT (Tools & Workshop)</option>
+                  <option value="OPERASIONAL">OPERASIONAL (Iklan & Software)</option>
                 </select>
               </div>
 

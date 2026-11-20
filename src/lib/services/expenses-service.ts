@@ -1,11 +1,11 @@
-import { INITIAL_EXPENSES, INITIAL_EXPENSE_CATEGORIES } from "@/lib/data/initial-data";
+import { INITIAL_EXPENSES, STORE_EXPENSES, ALL_EXPENSES, INITIAL_EXPENSE_CATEGORIES } from "@/lib/data/initial-data";
 import { Expense, ExpenseCategory, PaymentMethod } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEnvStatus } from "@/lib/env";
 import Decimal from "decimal.js";
 
 // In-memory store for fallback & testing
-let memoryExpenses: Expense[] = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
+let memoryExpenses: Expense[] = JSON.parse(JSON.stringify(ALL_EXPENSES));
 let memoryCategories: ExpenseCategory[] = JSON.parse(JSON.stringify(INITIAL_EXPENSE_CATEGORIES));
 
 export interface CreateExpensePayload {
@@ -83,7 +83,7 @@ export async function getExpenses(filters?: ExpenseFilters): Promise<Expense[]> 
       }
 
       const { data, error } = await query;
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         return data as Expense[];
       }
     } catch {
@@ -259,7 +259,12 @@ export async function deleteExpense(id: string): Promise<boolean> {
 /**
  * Reset memory expenses (used for test isolation)
  */
-export function resetMemoryExpenses(): void {
-  memoryExpenses = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
+export function resetMemoryExpenses(initialOnly = false): void {
+  if (initialOnly) {
+    memoryExpenses = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
+  } else {
+    memoryExpenses = JSON.parse(JSON.stringify(ALL_EXPENSES));
+  }
   memoryCategories = JSON.parse(JSON.stringify(INITIAL_EXPENSE_CATEGORIES));
 }
+

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { ProductWithBOM } from "@/lib/data/initial-data";
 import { Material, ChannelSource, PaymentMethod } from "@/types/database";
+import { calculatePlatformFee, getChannelLabel, isMarketplaceChannel } from "@/lib/financial/platform-fees";
 import { formatRupiah } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -244,14 +245,9 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
     // Total Modal HPP = Raw Products Modal + Selected Packaging Modal
     const totalHpp = rawProductHppSubtotal.plus(packagingCostSubtotal);
 
-    // Platform Fee: Shopee (9.5% Admin + Rp 1.250 Biaya Proses + 0.5% PPh 22), Direct: 0
-    let platformFee = new Decimal(0);
-    if (channel === "Shopee" && totalAmount.greaterThan(0)) {
-      const adminFee = totalAmount.times(0.095);
-      const processFee = new Decimal(1250);
-      const pph22 = totalAmount.times(0.005);
-      platformFee = adminFee.plus(processFee).plus(pph22);
-    }
+    // Platform Fee (Centralized calculation across channels)
+    const feeBreakdown = calculatePlatformFee(channel, totalAmount.toNumber());
+    const platformFee = new Decimal(feeBreakdown.totalFee);
 
     // Pendapatan Bersih (Net Profit)
     const netProfit = totalAmount.minus(totalHpp).minus(platformFee);
@@ -270,6 +266,8 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
       totalAmount: totalAmount.toNumber(),
       totalHpp: totalHpp.toNumber(),
       platformFee: platformFee.toNumber(),
+      feeLabel: feeBreakdown.label,
+      feeRateDesc: feeBreakdown.rateDescription,
       netProfit: netProfit.toNumber(),
       marginPct: Number(marginPct.toFixed(1)),
     };
@@ -396,36 +394,58 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
         {/* LEFT COLUMN: Catalog (Products Raw & Packaging Materials) */}
         <div className="lg:col-span-7 space-y-4">
           {/* Channel Selector Banner */}
-          <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="text-xs">
-              <span className="text-zinc-500 block">Pilih Kanal Penjualan:</span>
+              <span className="text-zinc-500 block">Kanal Penjualan Aktif:</span>
               <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                {channel === "Shopee" ? "Marketplace Shopee (Admin 9.5% + Proses Rp 1.250 + PPh 22 0.5%)" : "Direct / Walk-in / WhatsApp (Fee Rp 0)"}
+                {financials.feeRateDesc}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setChannel("Direct")}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   channel === "Direct"
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
                 }`}
               >
-                <Store className="h-3.5 w-3.5" /> Direct (Fee 0)
+                <Store className="h-3.5 w-3.5" /> Direct (0%)
               </button>
               <button
                 type="button"
                 onClick={() => setChannel("Shopee")}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   channel === "Shopee"
                     ? "bg-orange-600 text-white shadow-sm"
                     : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
                 }`}
               >
-                <ShoppingBagIcon className="h-3.5 w-3.5" /> Shopee (Fee Presisi)
+                <ShoppingBagIcon className="h-3.5 w-3.5" /> Shopee
+              </button>
+              <button
+                type="button"
+                onClick={() => setChannel("TikTokShop")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  channel === "TikTokShop"
+                    ? "bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-950"
+                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
+                }`}
+              >
+                <ShoppingBagIcon className="h-3.5 w-3.5" /> TikTok Shop
+              </button>
+              <button
+                type="button"
+                onClick={() => setChannel("Tokopedia")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  channel === "Tokopedia"
+                    ? "bg-emerald-700 text-white shadow-sm"
+                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
+                }`}
+              >
+                <Store className="h-3.5 w-3.5" /> Tokopedia
               </button>
             </div>
           </div>
@@ -777,9 +797,9 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
                 <div className="flex justify-between items-center text-xs pb-2 border-b border-zinc-800">
                   <div>
                     <span className="text-zinc-400 block font-semibold">
-                      {channel === "Shopee" ? "Omzet Riil Diterima (Kas)" : "Total Tagihan (Omzet)"}
+                      {isMarketplaceChannel(channel) ? "Omzet Riil Diterima (Kas)" : "Total Tagihan (Omzet)"}
                     </span>
-                    {channel === "Shopee" && (
+                    {isMarketplaceChannel(channel) && (
                       <span className="text-[10px] text-zinc-400 font-normal block">
                         Tagihan Invoice: {formatRupiah(financials.totalAmount)}
                       </span>
@@ -787,7 +807,7 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
                   </div>
                   <span className="text-base font-black text-emerald-400 font-mono">
                     {formatRupiah(
-                      channel === "Shopee"
+                      isMarketplaceChannel(channel)
                         ? Math.max(0, financials.totalAmount - financials.platformFee)
                         : financials.totalAmount
                     )}
@@ -806,12 +826,12 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
                   </div>
 
                   <div>
-                    <span className="block">Potongan Shopee:</span>
+                    <span className="block">Potongan Fee {getChannelLabel(channel)}:</span>
                     <strong className="text-orange-400 font-mono text-xs">
                       {formatRupiah(financials.platformFee)}
                     </strong>
                     <span className="block text-[9px] text-zinc-500">
-                      {channel === "Shopee" ? "Admin 9.5% + Rp 1.250 + PPh 0.5%" : "Kanal Direct (0%)"}
+                      {financials.feeLabel}
                     </span>
                   </div>
                 </div>

@@ -12,6 +12,7 @@ import {
   updateMaterialAction,
   deleteMaterialAction,
   recordStockMovementAction,
+  adjustStockAction,
 } from "./actions";
 import {
   Plus,
@@ -23,6 +24,8 @@ import {
   X,
   Edit2,
   Trash2,
+  Scale,
+  ClipboardCheck,
 } from "lucide-react";
 
 interface InventoryClientProps {
@@ -49,7 +52,14 @@ export function InventoryClient({
   // Modals
   const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
   const [showMovementModal, setShowMovementModal] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+
+  // Stock Adjustment / Opname Form
+  const [adjustMaterialId, setAdjustMaterialId] = useState(materials[0]?.id || "");
+  const [physicalStock, setPhysicalStock] = useState<number | "">("");
+  const [adjustReason, setAdjustReason] = useState("Hasil Stock Opname Fisik Berkala");
+  const [adjustNotes, setAdjustNotes] = useState("");
 
   // Material Form
   const [name, setName] = useState("");
@@ -230,6 +240,57 @@ export function InventoryClient({
     setSubmitting(false);
   };
 
+  // Open Stock Adjustment / Opname Modal
+  const openAdjustModal = (mat?: Material) => {
+    const target = mat || materials.find((m) => m.id === adjustMaterialId) || materials[0];
+    if (target) {
+      setAdjustMaterialId(target.id);
+      setPhysicalStock(target.current_stock);
+    } else {
+      setPhysicalStock("");
+    }
+    setAdjustReason("Hasil Stock Opname Fisik Berkala");
+    setAdjustNotes("");
+    setShowAdjustModal(true);
+  };
+
+  const handleAdjustSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (physicalStock === "") return;
+
+    setSubmitting(true);
+    const res = await adjustStockAction({
+      material_id: adjustMaterialId,
+      physical_stock: Number(physicalStock),
+      reason: adjustReason,
+      notes: adjustNotes.trim() || undefined,
+    });
+
+    if (res.success) {
+      const { material, movement, difference } = res;
+      if (material) {
+        setMaterials((prev) =>
+          prev.map((m) => (m.id === material.id ? material : m))
+        );
+      }
+      if (movement) {
+        setMovements((prev) => [movement, ...prev]);
+      }
+      const diff = difference ?? 0;
+      setFeedback({
+        type: "success",
+        message: `Stok ${material.name} berhasil disesuaikan menjadi ${material.current_stock} ${material.unit} (Selisih: ${diff > 0 ? "+" : ""}${diff} ${material.unit}).`,
+      });
+      setShowAdjustModal(false);
+    } else {
+      setFeedback({
+        type: "error",
+        message: res.error || "Gagal melakukan penyesuaian stok.",
+      });
+    }
+    setSubmitting(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Feedback Banner */}
@@ -312,6 +373,14 @@ export function InventoryClient({
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openAdjustModal()}
+              className="gap-1.5 text-xs cursor-pointer border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"
+            >
+              <Scale className="h-3.5 w-3.5 text-amber-600" /> Penyesuaian Stok (Opname)
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -410,6 +479,14 @@ export function InventoryClient({
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openAdjustModal(item)}
+                            className="p-1 text-zinc-400 hover:text-amber-600 rounded cursor-pointer"
+                            title="Penyesuaian Stok (Stock Opname)"
+                          >
+                            <Scale className="h-3.5 w-3.5 text-amber-600" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => openEditModal(item)}
@@ -761,6 +838,176 @@ export function InventoryClient({
           </div>
         </div>
       )}
+      {/* Modal Dialog: Penyesuaian Stok / Stock Opname */}
+      {showAdjustModal && (() => {
+        const currentMat = materials.find((m) => m.id === adjustMaterialId) || materials[0];
+        const sysStock = currentMat?.current_stock ?? 0;
+        const pStock = physicalStock === "" ? sysStock : Number(physicalStock);
+        const diff = pStock - sysStock;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Scale className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                      Penyesuaian Stok (Stock Opname)
+                    </h3>
+                    <p className="text-[11px] text-zinc-500">
+                      Sesuaikan saldo sistem dengan jumlah fisik nyata
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAdjustModal(false)}
+                  className="p-1 rounded-md text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAdjustSubmit} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Pilih Bahan Baku <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={adjustMaterialId}
+                    onChange={(e) => {
+                      const newId = e.target.value;
+                      setAdjustMaterialId(newId);
+                      const target = materials.find((m) => m.id === newId);
+                      if (target) setPhysicalStock(target.current_stock);
+                    }}
+                    className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 text-xs font-medium"
+                  >
+                    {materials.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} (Stok Sistem: {m.current_stock} {m.unit})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {currentMat && (
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-zinc-500 block">Stok Tercatat Sistem:</span>
+                      <strong className="text-zinc-900 dark:text-zinc-100 font-mono text-xs">
+                        {formatNumber(currentMat.current_stock)} {currentMat.unit}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block">Biaya Perolehan:</span>
+                      <span className="text-amber-700 dark:text-amber-400 font-mono font-semibold">
+                        {formatRupiah(currentMat.cost_per_unit)} / {currentMat.unit}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      Hasil Hitungan Fisik Riil (Stok Nyata) <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-zinc-400">
+                      Satuan: {currentMat?.unit || "unit"}
+                    </span>
+                  </div>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    placeholder="Masukkan jumlah fisik aktual..."
+                    value={physicalStock}
+                    onChange={(e) =>
+                      setPhysicalStock(e.target.value === "" ? "" : Number(e.target.value))
+                    }
+                    className="text-xs h-9 font-bold text-zinc-900 dark:text-zinc-100 font-mono text-base"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Live Difference Indicator */}
+                <div className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
+                  diff === 0
+                    ? "bg-zinc-100/60 text-zinc-600 border-zinc-200 dark:bg-zinc-800/40 dark:text-zinc-400 dark:border-zinc-700"
+                    : diff < 0
+                    ? "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                }`}>
+                  <span className="font-medium">
+                    {diff === 0
+                      ? "Stok Sesuai (Tidak Ada Selisih)"
+                      : diff < 0
+                      ? "Koreksi Pengurangan (Susut / Cacat)"
+                      : "Koreksi Penambahan (Saldo Ditemukan)"}
+                  </span>
+                  <span className="font-mono font-bold">
+                    {diff > 0 ? "+" : ""}{diff} {currentMat?.unit}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Alasan Penyesuaian
+                  </label>
+                  <select
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value)}
+                    className="w-full h-8 px-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 text-xs"
+                  >
+                    <option value="Hasil Stock Opname Fisik Berkala">Hasil Stock Opname Fisik Berkala</option>
+                    <option value="Kerusakan / Cacat Bahan / Susut">Kerusakan / Cacat Bahan / Susut</option>
+                    <option value="Koreksi Selisih Timbangan / Pemotongan Tak Tercatat">Koreksi Selisih Timbangan / Pemakaian Tak Tercatat</option>
+                    <option value="Penyesuaian Saldo Awal / Koreksi Input">Penyesuaian Saldo Awal / Koreksi Input</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Catatan Tambahan (Opsional)
+                  </label>
+                  <Input
+                    placeholder="Misal: Pengecekan fisik rak workshop..."
+                    value={adjustNotes}
+                    onChange={(e) => setAdjustNotes(e.target.value)}
+                    className="text-xs h-8"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowAdjustModal(false)}
+                    className="text-xs h-8 cursor-pointer"
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="accent"
+                    disabled={submitting || physicalStock === ""}
+                    className="text-xs h-8 font-semibold cursor-pointer gap-1.5"
+                  >
+                    <ClipboardCheck className="w-3.5 h-3.5" />
+                    {submitting ? "Menerapkan..." : "Terapkan Penyesuaian"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

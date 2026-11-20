@@ -7,8 +7,10 @@ import {
   deleteMaterial,
   recordStockMovement,
   CreateStockMovementPayload,
+  adjustMaterialStock,
+  AdjustMaterialStockPayload,
 } from "@/lib/services/materials-service";
-import { Material } from "@/types/database";
+import { Material, StockMovement } from "@/types/database";
 
 export async function createMaterialAction(payload: {
   name: string;
@@ -65,6 +67,26 @@ export async function recordStockMovementAction(payload: CreateStockMovementPayl
     return { success: true, movement };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Gagal mencatat mutasi stok.";
+    return { success: false, error: message };
+  }
+}
+
+export async function adjustStockAction(payload: AdjustMaterialStockPayload): Promise<
+  | { success: true; material: Material; movement: StockMovement; difference: number }
+  | { success: false; error: string }
+> {
+  try {
+    const res = await adjustMaterialStock(payload);
+    revalidatePath("/inventory");
+    revalidatePath("/products");
+    return {
+      success: true,
+      material: res.material,
+      movement: res.movement,
+      difference: res.difference,
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Gagal menyesuaikan stok bahan baku.";
     return { success: false, error: message };
   }
 }

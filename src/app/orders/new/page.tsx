@@ -1,5 +1,6 @@
 import React from "react";
 import { getProducts } from "@/lib/services/products-service";
+import { getMaterials } from "@/lib/services/materials-service";
 import { NewOrderClient } from "./new-order-client";
 
 export const metadata = {
@@ -8,7 +9,10 @@ export const metadata = {
 };
 
 export default async function NewOrderPage() {
-  const products = await getProducts(false);
+  const [products, materials] = await Promise.all([
+    getProducts(false),
+    getMaterials(),
+  ]);
 
-  return <NewOrderClient products={products} />;
+  return <NewOrderClient products={products} materials={materials} />;
 }

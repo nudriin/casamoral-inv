@@ -8,6 +8,8 @@ import { Product, Material, Asset, Customer, Order, Payment, Expense, ExpenseCat
  * Single Source of Truth for local demo, seeding, and database initialization.
  */
 
+export type CapitalCategory = "MESIN" | "FILAMEN" | "KELISTRIKAN" | "KEMASAN" | "ALAT" | "OPERASIONAL";
+
 export interface CapitalPurchaseItem {
   id: string;
   name: string;
@@ -15,90 +17,184 @@ export interface CapitalPurchaseItem {
   quantity: number;
   serviceFee: number;
   totalCost: number;
-  category: "MESIN" | "FILAMEN" | "KELISTRIKAN" | "KEMASAN" | "ALAT";
+  category: CapitalCategory;
+  purchaseDate?: string;
+  account?: string;
 }
 
-// 23 Items of Initial Capital Purchases (Tabel 3 Excel, Total = Rp 11.440.748)
+// 19 Items Modal Awal & Setup (23/09/2026 - 14/10/2026 dari data/moral_lab_expenses.csv, Total = Rp 11.546.443)
+// Catatan: Transaksi 23/09/2026 Rp 4.088.309 dipecah menjadi Mesin Bambulab A1 Mini (Rp 3.589.221) + 4 Filamen eSUN PETG (Rp 499.088).
 export const INITIAL_CAPITAL_PURCHASES: CapitalPurchaseItem[] = [
-  { id: "cap-01", name: "Mesin Bambulab A1 Mini", unitPrice: 3587221, quantity: 1, serviceFee: 2000, totalCost: 3589221, category: "MESIN" },
-  { id: "cap-02", name: "Mesin Anycubic Kobra X", unitPrice: 5870800, quantity: 1, serviceFee: 2000, totalCost: 5872800, category: "MESIN" },
-  { id: "cap-03", name: "Filament eSUN PETG Clear", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
-  { id: "cap-04", name: "Filament eSUN PETG Transparent Blue", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
-  { id: "cap-05", name: "Filament eSUN PETG Transparent Pink", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
-  { id: "cap-06", name: "Filament eSUN PETG Black", unitPrice: 123001, quantity: 1, serviceFee: 2000, totalCost: 125001, category: "FILAMEN" },
-  { id: "cap-07", name: "Fitting E27 (Batch 1)", unitPrice: 5700, quantity: 5, serviceFee: 2000, totalCost: 30500, category: "KELISTRIKAN" },
-  { id: "cap-08", name: "Kabel Sakelar On/Off (Batch 1)", unitPrice: 9360, quantity: 5, serviceFee: 2000, totalCost: 48800, category: "KELISTRIKAN" },
-  { id: "cap-09", name: "Filament eSUN PLA Basic White", unitPrice: 154560, quantity: 1, serviceFee: 2000, totalCost: 156560, category: "FILAMEN" },
-  { id: "cap-10", name: "Filament eSUN PETG Natural", unitPrice: 123000, quantity: 1, serviceFee: 2000, totalCost: 125000, category: "FILAMEN" },
-  { id: "cap-11", name: "Filament IndoCart PLA Basic Orange", unitPrice: 135000, quantity: 2, serviceFee: 2000, totalCost: 272000, category: "FILAMEN" },
-  { id: "cap-12", name: "Filament IndoCart PLA Matte Sakura Pink", unitPrice: 147000, quantity: 1, serviceFee: 2000, totalCost: 149000, category: "FILAMEN" },
-  { id: "cap-13", name: "Filament IndoCart PLA Basic Dark Blue", unitPrice: 135000, quantity: 1, serviceFee: 2000, totalCost: 137000, category: "FILAMEN" },
-  { id: "cap-14", name: "Karet Pelindung Kabel", unitPrice: 675, quantity: 30, serviceFee: 2000, totalCost: 22250, category: "KELISTRIKAN" },
-  { id: "cap-15", name: "Kabel Sakelar On/Off (Batch 2)", unitPrice: 9360, quantity: 5, serviceFee: 2000, totalCost: 48800, category: "KELISTRIKAN" },
-  { id: "cap-16", name: "Kardus Karton 20 x 20 x 20", unitPrice: 3400, quantity: 20, serviceFee: 2000, totalCost: 70000, category: "KEMASAN" },
-  { id: "cap-17", name: "Bubble Wrap Roll 30cm x 50m", unitPrice: 30217, quantity: 1, serviceFee: 2000, totalCost: 32217, category: "KEMASAN" },
-  { id: "cap-18", name: "Fitting E27 (Batch 2)", unitPrice: 5700, quantity: 5, serviceFee: 2000, totalCost: 30500, category: "KELISTRIKAN" },
-  { id: "cap-19", name: "Jangka Sorong Digital", unitPrice: 45499, quantity: 1, serviceFee: 2000, totalCost: 47499, category: "ALAT" },
-  { id: "cap-20", name: "Kabel Sakelar On/Off (Batch 3)", unitPrice: 9360, quantity: 10, serviceFee: 2000, totalCost: 95600, category: "KELISTRIKAN" },
-  { id: "cap-21", name: "Magnet Neodium Bulat 20Pcs (3 set)", unitPrice: 15000, quantity: 3, serviceFee: 2000, totalCost: 47000, category: "ALAT" },
-  { id: "cap-22", name: "Fitting E27 (Batch 3)", unitPrice: 5700, quantity: 10, serviceFee: 2000, totalCost: 59000, category: "KELISTRIKAN" },
-  { id: "cap-23", name: "Bohlam Inlite 3W Putih / Warm White", unitPrice: 10500, quantity: 10, serviceFee: 2000, totalCost: 107000, category: "KELISTRIKAN" },
+  { id: "cap-01", name: "Mesin Bambulab A1 Mini", unitPrice: 3589221, quantity: 1, serviceFee: 0, totalCost: 3589221, category: "MESIN", purchaseDate: "2026-09-23", account: "BCA" },
+  { id: "cap-02", name: "Filament eSUN PETG Basic Clear", unitPrice: 123000, quantity: 1, serviceFee: 1772, totalCost: 124772, category: "FILAMEN", purchaseDate: "2026-09-23", account: "BCA" },
+  { id: "cap-03", name: "Filament eSUN PETG Basic Transparent Blue", unitPrice: 123000, quantity: 1, serviceFee: 1772, totalCost: 124772, category: "FILAMEN", purchaseDate: "2026-09-23", account: "BCA" },
+  { id: "cap-04", name: "Filament eSUN PETG Basic Light Pink", unitPrice: 123000, quantity: 1, serviceFee: 1772, totalCost: 124772, category: "FILAMEN", purchaseDate: "2026-09-23", account: "BCA" },
+  { id: "cap-05", name: "Filament eSUN PETG Basic Black", unitPrice: 123000, quantity: 1, serviceFee: 1772, totalCost: 124772, category: "FILAMEN", purchaseDate: "2026-09-23", account: "BCA" },
+  { id: "cap-06", name: "Fitting Lampu + Kabel Sakelar", unitPrice: 86038, quantity: 1, serviceFee: 0, totalCost: 86038, category: "KELISTRIKAN", purchaseDate: "2026-09-24", account: "BCA" },
+  { id: "cap-07", name: "Filament PETG & PLA Putih", unitPrice: 261130, quantity: 1, serviceFee: 0, totalCost: 261130, category: "FILAMEN", purchaseDate: "2026-10-03", account: "BCA" },
+  { id: "cap-08", name: "Silica Gel 1 KG", unitPrice: 55000, quantity: 1, serviceFee: 0, totalCost: 55000, category: "KEMASAN", purchaseDate: "2026-10-06", account: "Cash" },
+  { id: "cap-09", name: "Plastik Klip 35x40", unitPrice: 100000, quantity: 1, serviceFee: 0, totalCost: 100000, category: "KEMASAN", purchaseDate: "2026-10-06", account: "Cash" },
+  { id: "cap-10", name: "Filament PLA", unitPrice: 524000, quantity: 1, serviceFee: 0, totalCost: 524000, category: "FILAMEN", purchaseDate: "2026-10-06", account: "BCA" },
+  { id: "cap-11", name: "Kardus Packing 20 x 20 x 20 (20 box)", unitPrice: 3400, quantity: 20, serviceFee: 2000, totalCost: 70000, category: "KEMASAN", purchaseDate: "2026-10-08", account: "BCA" },
+  { id: "cap-12", name: "Karet Pelindung Kabel (30 pcs)", unitPrice: 675, quantity: 30, serviceFee: 2000, totalCost: 22250, category: "KELISTRIKAN", purchaseDate: "2026-10-08", account: "BCA" },
+  { id: "cap-13", name: "Kabel Sakelar (5 pcs)", unitPrice: 9360, quantity: 5, serviceFee: 2000, totalCost: 48800, category: "KELISTRIKAN", purchaseDate: "2026-10-08", account: "BCA" },
+  { id: "cap-14", name: "Fitting E27 (5 pcs)", unitPrice: 5600, quantity: 5, serviceFee: 2000, totalCost: 30000, category: "KELISTRIKAN", purchaseDate: "2026-10-08", account: "BCA" },
+  { id: "cap-15", name: "Bubble Wrap 30cm x 5m (1 roll)", unitPrice: 30217, quantity: 1, serviceFee: 2000, totalCost: 32217, category: "KEMASAN", purchaseDate: "2026-10-08", account: "BCA" },
+  { id: "cap-16", name: "Lampu Inlite Putih 3 Watt (10 buah)", unitPrice: 10800, quantity: 10, serviceFee: 0, totalCost: 108000, category: "KELISTRIKAN", purchaseDate: "2026-10-13", account: "BCA" },
+  { id: "cap-17", name: "Vernier Caliper (Sigma/Jangka Sorong)", unitPrice: 48099, quantity: 1, serviceFee: 0, totalCost: 48099, category: "ALAT", purchaseDate: "2026-10-13", account: "BCA" },
+  { id: "cap-18", name: "Magnet Neodymium (60pcs uk 3 x 2)", unitPrice: 48000, quantity: 1, serviceFee: 0, totalCost: 48000, category: "ALAT", purchaseDate: "2026-10-13", account: "BCA" },
+  { id: "cap-19", name: "Fitting E27 (10) + Kabel Sakelar (10)", unitPrice: 15060, quantity: 10, serviceFee: 3200, totalCost: 153800, category: "KELISTRIKAN", purchaseDate: "2026-10-14", account: "BCA" },
+  { id: "cap-20", name: "Mesin Anycubic Kobra X (ShopeePay Later)", unitPrice: 5870800, quantity: 1, serviceFee: 0, totalCost: 5870800, category: "MESIN", purchaseDate: "2026-10-14", account: "Shopeepay Later" },
 ];
 
-// Fixed Assets (Mesin & Alat Kerja)
+// 23 Transaksi Restock Bahan, Alat & Kemasan Toko (15/10/2026 - 20/11/2026 dari data/moral_lab_expenses.csv, Total = Rp 3.265.377)
+export const STORE_PURCHASES: CapitalPurchaseItem[] = [
+  { id: "pur-01", name: "Filament Yellow & Dark Red (2 pcs)", unitPrice: 135000, quantity: 2, serviceFee: 4000, totalCost: 274000, category: "FILAMEN", purchaseDate: "2026-10-15", account: "BCA" },
+  { id: "pur-02", name: "Meja Printer (L=50, P=120, T=75)", unitPrice: 350000, quantity: 1, serviceFee: 0, totalCost: 350000, category: "ALAT", purchaseDate: "2026-10-15", account: "Cash" },
+  { id: "pur-03", name: "Heat Gun", unitPrice: 63000, quantity: 1, serviceFee: 0, totalCost: 63000, category: "ALAT", purchaseDate: "2026-10-17", account: "BCA" },
+  { id: "pur-04", name: "Skun Jarum Pipih (50 pcs)", unitPrice: 280, quantity: 50, serviceFee: 2500, totalCost: 16500, category: "KELISTRIKAN", purchaseDate: "2026-10-18", account: "BRI" },
+  { id: "pur-05", name: "Skun Jarum Pipih (100 pcs)", unitPrice: 333, quantity: 100, serviceFee: 0, totalCost: 33300, category: "KELISTRIKAN", purchaseDate: "2026-10-18", account: "BRI" },
+  { id: "pur-06", name: "Dry Box", unitPrice: 63000, quantity: 1, serviceFee: 0, totalCost: 63000, category: "ALAT", purchaseDate: "2026-10-19", account: "Cash" },
+  { id: "pur-07", name: "Bearing Untuk Dry Box (4 buah)", unitPrice: 45000, quantity: 1, serviceFee: 0, totalCost: 45000, category: "ALAT", purchaseDate: "2026-10-19", account: "BCA" },
+  { id: "pur-08", name: "Kebutuhan Lainnya di Mr.DIY", unitPrice: 92000, quantity: 1, serviceFee: 0, totalCost: 92000, category: "ALAT", purchaseDate: "2026-10-19", account: "BCA" },
+  { id: "pur-09", name: "Indocart PLA Basic White (2 pcs)", unitPrice: 137000, quantity: 2, serviceFee: 0, totalCost: 274000, category: "FILAMEN", purchaseDate: "2026-10-20", account: "BCA" },
+  { id: "pur-10", name: "Stempel Casa Moral", unitPrice: 75000, quantity: 1, serviceFee: 0, totalCost: 75000, category: "ALAT", purchaseDate: "2026-10-20", account: "BCA" },
+  { id: "pur-11", name: "Indocart PLA Basic Orange (2) + Matte Matcha (1)", unitPrice: 125100, quantity: 3, serviceFee: 26500, totalCost: 401800, category: "FILAMEN", purchaseDate: "2026-10-23", account: "BCA" },
+  { id: "pur-12", name: "Fitting E27 (10) + Kabel Sakelar (10)", unitPrice: 15783, quantity: 10, serviceFee: 0, totalCost: 157830, category: "KELISTRIKAN", purchaseDate: "2026-10-24", account: "BCA" },
+  { id: "pur-13", name: "Lampu Inlite Warm 3W (10) + Meval 3W (1) + Tas", unitPrice: 170060, quantity: 1, serviceFee: 0, totalCost: 170060, category: "KELISTRIKAN", purchaseDate: "2026-10-24", account: "BCA" },
+  { id: "pur-14", name: "Kertas Packing Honeycomb 100m (2 Roll 30cm x 50m)", unitPrice: 83500, quantity: 2, serviceFee: 25690, totalCost: 192690, category: "KEMASAN", purchaseDate: "2026-10-25", account: "BCA" },
+  { id: "pur-15", name: "Indocart PLA Basic Dark Red (2 pcs)", unitPrice: 135000, quantity: 2, serviceFee: 3500, totalCost: 273500, category: "FILAMEN", purchaseDate: "2026-10-27", account: "BCA" },
+  { id: "pur-16", name: "Bubble Wrap 30cm x 5m (Pakai Uang Lampu)", unitPrice: 29300, quantity: 1, serviceFee: 0, totalCost: 29300, category: "KEMASAN", purchaseDate: "2026-11-04", account: "SeaBank" },
+  { id: "pur-17", name: "Bubble Wrap 30cm x 5m (TikTok Shop)", unitPrice: 39847, quantity: 1, serviceFee: 0, totalCost: 39847, category: "KEMASAN", purchaseDate: "2026-11-05", account: "SeaBank" },
+  { id: "pur-18", name: "Karet Pelindung Kabel (100 pcs)", unitPrice: 55800, quantity: 1, serviceFee: 0, totalCost: 55800, category: "KELISTRIKAN", purchaseDate: "2026-11-05", account: "SeaBank" },
+  { id: "pur-19", name: "Kabel Sakelar (10 pcs)", unitPrice: 101330, quantity: 1, serviceFee: 0, totalCost: 101330, category: "KELISTRIKAN", purchaseDate: "2026-11-13", account: "SeaBank" },
+  { id: "pur-20", name: "Lampu Inlite Warm 3 Watt (12 buah @ Rp 14.800)", unitPrice: 14800, quantity: 12, serviceFee: 0, totalCost: 177600, category: "KELISTRIKAN", purchaseDate: "2026-11-13", account: "SeaBank" },
+  { id: "pur-21", name: "Filament PLA White Elegoo", unitPrice: 133300, quantity: 1, serviceFee: 0, totalCost: 133300, category: "FILAMEN", purchaseDate: "2026-11-14", account: "BCA" },
+  { id: "pur-22", name: "Fitting E27 (20 pcs)", unitPrice: 133520, quantity: 1, serviceFee: 0, totalCost: 133520, category: "KELISTRIKAN", purchaseDate: "2026-11-17", account: "SeaBank" },
+  { id: "pur-23", name: "Fitting E27 Keramik (30 pcs @ Rp 3.700)", unitPrice: 3700, quantity: 30, serviceFee: 2000, totalCost: 113000, category: "KELISTRIKAN", purchaseDate: "2026-11-20", account: "BCA" },
+];
+
+// Semua Transaksi Belanja Modal & Pengadaan Aset Toko (43 Items = Rp 14.811.820)
+export const ALL_CAPITAL_PURCHASES: CapitalPurchaseItem[] = [
+  ...INITIAL_CAPITAL_PURCHASES,
+  ...STORE_PURCHASES,
+];
+
+// Fixed Assets (Mesin & Alat Kerja — Tanggal & Harga sesuai data/moral_lab_expenses.csv)
 export const INITIAL_ASSETS: Asset[] = [
   {
     id: "asset-01",
     name: "Mesin Bambulab A1 Mini",
     category: "printer_3d",
-    purchase_date: "2026-08-01",
+    purchase_date: "2026-09-23",
     purchase_price: 3589221,
     residual_value: 500000,
     useful_life_months: 24,
     estimated_hours_per_month: 150,
     power_watts: 60,
     status: "ACTIVE",
-    created_at: "2026-08-01T00:00:00Z",
+    created_at: "2026-09-23T00:00:00Z",
   },
   {
     id: "asset-02",
     name: "Mesin Anycubic Kobra X",
     category: "printer_3d",
-    purchase_date: "2026-08-01",
-    purchase_price: 5872800,
+    purchase_date: "2026-10-14",
+    purchase_price: 5870800,
     residual_value: 500000,
     useful_life_months: 24,
     estimated_hours_per_month: 150,
     power_watts: 110,
     status: "ACTIVE",
-    created_at: "2026-08-01T00:00:00Z",
+    created_at: "2026-10-14T00:00:00Z",
   },
   {
     id: "asset-03",
-    name: "Jangka Sorong Digital",
+    name: "Vernier Caliper (Sigma/Jangka Sorong)",
     category: "tool",
-    purchase_date: "2026-08-01",
-    purchase_price: 47499,
+    purchase_date: "2026-10-13",
+    purchase_price: 48099,
     residual_value: 0,
     useful_life_months: 24,
     estimated_hours_per_month: 50,
     power_watts: 0,
     status: "ACTIVE",
-    created_at: "2026-08-01T00:00:00Z",
+    created_at: "2026-10-13T00:00:00Z",
   },
   {
     id: "asset-04",
-    name: "Magnet Neodium Bulat 20Pcs (3 set)",
+    name: "Magnet Neodymium (60pcs uk 3 x 2)",
     category: "tool",
-    purchase_date: "2026-08-01",
-    purchase_price: 47000,
+    purchase_date: "2026-10-13",
+    purchase_price: 48000,
     residual_value: 0,
     useful_life_months: 24,
     estimated_hours_per_month: 50,
     power_watts: 0,
     status: "ACTIVE",
-    created_at: "2026-08-01T00:00:00Z",
+    created_at: "2026-10-13T00:00:00Z",
   },
+];
+
+// Aset Tambahan Workshop dari CSV (Meja Printer, Heat Gun, Dry Box, Stempel)
+export const STORE_ASSETS: Asset[] = [
+  {
+    id: "asset-05",
+    name: "Meja Printer (L=50, P=120, T=75)",
+    category: "furniture",
+    purchase_date: "2026-10-15",
+    purchase_price: 350000,
+    residual_value: 0,
+    useful_life_months: 36,
+    estimated_hours_per_month: 150,
+    power_watts: 0,
+    status: "ACTIVE",
+    created_at: "2026-10-15T00:00:00Z",
+  },
+  {
+    id: "asset-06",
+    name: "Heat Gun Post-Processing 3D Print",
+    category: "tool",
+    purchase_date: "2026-10-17",
+    purchase_price: 63000,
+    residual_value: 0,
+    useful_life_months: 24,
+    estimated_hours_per_month: 30,
+    power_watts: 300,
+    status: "ACTIVE",
+    created_at: "2026-10-17T00:00:00Z",
+  },
+  {
+    id: "asset-07",
+    name: "Dry Box Container Filamen 3D Print",
+    category: "tool",
+    purchase_date: "2026-10-19",
+    purchase_price: 63000,
+    residual_value: 0,
+    useful_life_months: 24,
+    estimated_hours_per_month: 100,
+    power_watts: 0,
+    status: "ACTIVE",
+    created_at: "2026-10-19T00:00:00Z",
+  },
+  {
+    id: "asset-08",
+    name: "Stempel Casa Moral",
+    category: "tool",
+    purchase_date: "2026-10-20",
+    purchase_price: 75000,
+    residual_value: 0,
+    useful_life_months: 24,
+    estimated_hours_per_month: 30,
+    power_watts: 0,
+    status: "ACTIVE",
+    created_at: "2026-10-20T00:00:00Z",
+  },
+];
+
+export const ALL_ASSETS: Asset[] = [
+  ...INITIAL_ASSETS,
+  ...STORE_ASSETS,
 ];
 
 // Master Materials & Raw Components (Tabel 1 Excel)
@@ -189,13 +285,13 @@ export const INITIAL_MATERIALS: Material[] = [
   },
   {
     id: "mat-08",
-    name: "Sticker Label / Branding Casa Moral",
+    name: "Kertas Packing Honeycomb 30cm x 50m",
     category: "packaging",
-    unit: "pcs",
-    current_stock: 100,
+    unit: "meter",
+    current_stock: 100, // 2 Roll x 50 meter = 100 meter (pur-03)
     min_stock_alert: 10,
-    cost_per_unit: 1000,
-    supplier: "Percetakan Vinyl",
+    cost_per_unit: 1670, // Rp 83.500 / 50m = Rp 1.670 / meter
+    supplier: "Shopee (2 Roll)",
     created_at: "2026-08-01T00:00:00Z",
     updated_at: "2026-08-01T00:00:00Z",
   },
@@ -236,7 +332,7 @@ export const INITIAL_PRODUCTS: ProductWithBOM[] = [
   {
     id: "prod-01",
     sku: "CM-LUMI-01",
-    name: "Lampu Ambient - Lumi",
+    name: "Lumi",
     category_id: "cat-ambient",
     description: "Lampu meja ambient 3D print model Lumi (Shade + Base, tanpa Cap). Cahaya hangat modern.",
     dimensions: {
@@ -272,7 +368,7 @@ export const INITIAL_PRODUCTS: ProductWithBOM[] = [
   {
     id: "prod-02",
     sku: "CM-OLLIE-01",
-    name: "Lampu Ambient - Ollie",
+    name: "Ollie",
     category_id: "cat-ambient",
     description: "Lampu meja ambient 3D print model Ollie (Shade + Base + Cap atas). Model terlaris Casa Moral.",
     dimensions: {
@@ -308,7 +404,7 @@ export const INITIAL_PRODUCTS: ProductWithBOM[] = [
   {
     id: "prod-03",
     sku: "CM-KUMO-01",
-    name: "Lampu Ambient - Kumo",
+    name: "Kumo",
     category_id: "cat-ambient",
     description: "Lampu meja ambient 3D print model Kumo bentuk awan halus melengkung.",
     dimensions: {
@@ -344,7 +440,7 @@ export const INITIAL_PRODUCTS: ProductWithBOM[] = [
   {
     id: "prod-04",
     sku: "CM-POMI-01",
-    name: "Lampu Ambient - Pomi",
+    name: "Pomi",
     category_id: "cat-ambient",
     description: "Lampu meja ambient 3D print model Pomi ukuran besar dengan kontur geometris estetis.",
     dimensions: {
@@ -377,6 +473,51 @@ export const INITIAL_PRODUCTS: ProductWithBOM[] = [
       overheadMultiplier: 1.2,
     },
   },
+];
+
+// Model Lampu Tambahan dari Pesanan Toko (Nomi)
+export const STORE_PRODUCTS: ProductWithBOM[] = [
+  {
+    id: "prod-05",
+    sku: "CM-NOMI-01",
+    name: "Nomi",
+    category_id: "cat-ambient",
+    description: "Lampu meja ambient 3D print model Nomi (Base + Shade + Cap). Desain elegan kompak warna cerah.",
+    dimensions: {
+      total_height_mm: 170,
+      shade_width_mm: 165,
+      shade_height_mm: 80,
+      base_height_mm: 90,
+      base_width_mm: 100,
+      nut_height_mm: 15,
+    },
+    calculation_mode: "STANDARD",
+    standard_overhead_multiplier: 1.2,
+    print_time_minutes: 280,
+    current_hpp: 86000,
+    recommended_price: 140000,
+    selling_price: 140000,
+    markup_percent: 50.0,
+    is_active: true,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    bom: {
+      shadeGram: 75.0,
+      baseGram: 100.0,
+      capGram: 15.0,
+      totalFilamentGram: 190.0,
+      filamentCost: 34200,
+      electricalCost: 31700,
+      packagingCost: 6500,
+      subtotalMaterial: 72400,
+      overheadMultiplier: 1.2,
+    },
+  },
+];
+
+export const ALL_PRODUCTS: ProductWithBOM[] = [
+  ...INITIAL_PRODUCTS,
+  ...STORE_PRODUCTS,
 ];
 
 // Initial Customers (Sheet: Orderan Casa Moral.xlsx)
@@ -453,6 +594,47 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     created_at: "2026-08-13T00:00:00Z",
     updated_at: "2026-08-13T00:00:00Z",
   },
+];
+
+// Pelanggan Tambahan dari Pesanan Toko Terupdate (Rajjil, Sahal, Bang Aryadi, tutoke706)
+export const STORE_CUSTOMERS: Customer[] = [
+  {
+    id: "cust-10",
+    name: "Rajjil",
+    city: "Palangka Raya",
+    channel_source: "Direct",
+    created_at: "2026-08-14T00:00:00Z",
+    updated_at: "2026-08-14T00:00:00Z",
+  },
+  {
+    id: "cust-11",
+    name: "Sahal",
+    city: "Depok",
+    channel_source: "Shopee",
+    created_at: "2026-08-15T00:00:00Z",
+    updated_at: "2026-08-15T00:00:00Z",
+  },
+  {
+    id: "cust-12",
+    name: "Bang Aryadi",
+    city: "Palangka Raya",
+    channel_source: "Direct",
+    created_at: "2026-08-16T00:00:00Z",
+    updated_at: "2026-08-16T00:00:00Z",
+  },
+  {
+    id: "cust-13",
+    name: "tutoke706",
+    city: "Bali",
+    channel_source: "Shopee",
+    created_at: "2026-08-17T00:00:00Z",
+    updated_at: "2026-08-17T00:00:00Z",
+  },
+];
+
+export const ALL_CUSTOMERS: Customer[] = [
+  ...INITIAL_CUSTOMERS,
+  ...STORE_CUSTOMERS,
 ];
 
 // 9 Historical Orders from Orderan Casa Moral.xlsx
@@ -775,6 +957,181 @@ export const INITIAL_ORDERS: Order[] = [
   },
 ];
 
+// 4 Pesanan Tambahan dari Update Excel (Rajjil, Sahal, Bang Aryadi, tutoke706)
+export const STORE_ORDERS: Order[] = [
+  {
+    id: "ord-10",
+    order_number: "ORD-2026-010",
+    order_date: "2026-08-14T10:00:00Z",
+    customer_id: "cust-10",
+    channel: "Direct",
+    status: "COMPLETED",
+    subtotal_amount: 100000,
+    add_on_amount: 0,
+    discount_amount: 0,
+    shipping_cost: 0,
+    platform_fee: 0,
+    total_amount: 100000,
+    payment_status: "PAID",
+    paid_amount: 100000,
+    notes: "Lunas transfer. Model Lumi (Base Oren + Shade Oren, Palangka Raya)",
+    created_at: "2026-08-14T10:00:00Z",
+    updated_at: "2026-08-14T10:00:00Z",
+    customer: STORE_CUSTOMERS[0],
+    items: [
+      {
+        id: "item-10",
+        order_id: "ord-10",
+        product_id: "prod-01",
+        quantity: 1,
+        unit_price: 100000,
+        unit_hpp: 81182.4,
+        color_details: "Base Oren + Shade Oren",
+        add_on_name: null,
+        add_on_price: 0,
+        subtotal: 100000,
+        created_at: "2026-08-14T10:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "ord-11",
+    order_number: "ORD-2026-011",
+    order_date: "2026-08-15T11:30:00Z",
+    customer_id: "cust-11",
+    channel: "Shopee",
+    status: "COMPLETED",
+    subtotal_amount: 140000,
+    add_on_amount: 0,
+    discount_amount: 0,
+    shipping_cost: 0,
+    platform_fee: 24350, // 140.000 - 115.650 uang bersih
+    total_amount: 140000,
+    payment_status: "PAID",
+    paid_amount: 140000,
+    notes: "Order via Shopee, pengiriman Depok. Uang bersih diterima Rp 115.650 (biaya Shopee Rp 24.350). Lunas",
+    created_at: "2026-08-15T11:30:00Z",
+    updated_at: "2026-08-15T11:30:00Z",
+    customer: STORE_CUSTOMERS[1],
+    items: [
+      {
+        id: "item-11",
+        order_id: "ord-11",
+        product_id: "prod-05",
+        quantity: 1,
+        unit_price: 140000,
+        unit_hpp: 86000,
+        color_details: "Base Biru + Shade Putih + Cap Biru",
+        add_on_name: null,
+        add_on_price: 0,
+        subtotal: 140000,
+        created_at: "2026-08-15T11:30:00Z",
+      },
+    ],
+  },
+  {
+    id: "ord-12",
+    order_number: "ORD-2026-012",
+    order_date: "2026-08-16T14:00:00Z",
+    customer_id: "cust-12",
+    channel: "Direct",
+    status: "COMPLETED",
+    subtotal_amount: 150000,
+    add_on_amount: 0,
+    discount_amount: 0,
+    shipping_cost: 0,
+    platform_fee: 0,
+    total_amount: 150000,
+    payment_status: "PAID",
+    paid_amount: 150000,
+    notes: "Lunas transfer. Model Ollie warna custom (Base Pink + Shade Putih + Cap Pink, Palangka Raya)",
+    created_at: "2026-08-16T14:00:00Z",
+    updated_at: "2026-08-16T14:00:00Z",
+    customer: STORE_CUSTOMERS[2],
+    items: [
+      {
+        id: "item-12",
+        order_id: "ord-12",
+        product_id: "prod-02",
+        quantity: 1,
+        unit_price: 150000,
+        unit_hpp: 89705.28,
+        color_details: "Base Pink + Shade Putih + Cap Pink",
+        add_on_name: null,
+        add_on_price: 0,
+        subtotal: 150000,
+        created_at: "2026-08-16T14:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "ord-13",
+    order_number: "ORD-2026-013",
+    order_date: "2026-08-17T16:20:00Z",
+    customer_id: "cust-13",
+    channel: "Shopee",
+    status: "COMPLETED",
+    subtotal_amount: 150000,
+    add_on_amount: 0,
+    discount_amount: 0,
+    shipping_cost: 0,
+    platform_fee: 26000, // 150.000 - 124.000 uang bersih
+    total_amount: 150000,
+    payment_status: "PAID",
+    paid_amount: 150000,
+    notes: "Order via Shopee, pengiriman Bali. Uang bersih diterima Rp 124.000 (biaya Shopee Rp 26.000). Lunas",
+    created_at: "2026-08-17T16:20:00Z",
+    updated_at: "2026-08-17T16:20:00Z",
+    customer: STORE_CUSTOMERS[3],
+    items: [
+      {
+        id: "item-13",
+        order_id: "ord-13",
+        product_id: "prod-02",
+        quantity: 1,
+        unit_price: 150000,
+        unit_hpp: 89705.28,
+        color_details: "Base Oren + Shade Putih + Cap Oren",
+        add_on_name: null,
+        add_on_price: 0,
+        subtotal: 150000,
+        created_at: "2026-08-17T16:20:00Z",
+      },
+    ],
+  },
+];
+
+// Semua 13 Pesanan Toko Terupdate Sesuai Sheet Excel (Total Omzet: Rp 1.485.000, Lunas: Rp 945.000, Piutang: Rp 540.000)
+export const ALL_ORDERS: Order[] = [
+  {
+    ...INITIAL_ORDERS[0],
+    platform_fee: 14250, // 130.000 - 115.750 uang bersih
+    notes: "Order via Shopee, checkout Sukamara. Uang bersih diterima Rp 115.750 (fee Shopee Rp 14.250)",
+  },
+  {
+    // ord-02: Gress terupdate LUNAS via Shopee (Rp 115.000, fee Shopee Rp 20.225)
+    ...INITIAL_ORDERS[1],
+    channel: "Shopee",
+    discount_amount: 0,
+    platform_fee: 20225,
+    payment_status: "PAID",
+    paid_amount: 115000,
+    notes: "Order via Shopee, pengiriman Palangka Raya (Pky). Status: Lunas. Uang bersih diterima Rp 94.775 (fee Shopee Rp 20.225)",
+  },
+  INITIAL_ORDERS[2], // ord-03: Acil Ely Ollie (Rp 130.000, Direct, Belum Lunas)
+  {
+    ...INITIAL_ORDERS[3],
+    customer_id: "cust-03",
+    customer: INITIAL_CUSTOMERS[2], // Acil Ely Pomi (Rp 150.000, Direct, Belum Lunas)
+  },
+  INITIAL_ORDERS[4], // ord-05: Istri Om Ridwan (Rp 130.000, Direct, Belum Lunas)
+  INITIAL_ORDERS[5], // ord-06: Bang Dona Ollie (Rp 0, Direct, Belum Lunas)
+  INITIAL_ORDERS[6], // ord-07: Bang Dona Kumo (Rp 0, Direct, Belum Lunas)
+  INITIAL_ORDERS[7], // ord-08: Wahyu (Rp 160.000, Direct, Lunas)
+  INITIAL_ORDERS[8], // ord-09: Mama (Rp 130.000, Direct, Lunas)
+  ...STORE_ORDERS,   // ord-10 (Rajjil), ord-11 (Sahal), ord-12 (Bang Aryadi), ord-13 (tutoke706)
+];
+
 // Initial Verified Payments (Realisasi Kas Masuk Rp 290.000: Wahyu Rp 160k + Mama Rp 130k)
 export const INITIAL_PAYMENTS: Payment[] = [
   {
@@ -798,6 +1155,67 @@ export const INITIAL_PAYMENTS: Payment[] = [
     created_at: "2026-08-13T10:30:00Z",
   },
 ];
+
+// Pembayaran Tambahan untuk Pesanan yang Berstatus Lunas di Excel Terupdate (Total: Rp 655.000)
+export const STORE_PAYMENTS: Payment[] = [
+  {
+    id: "pay-03",
+    order_id: "ord-02",
+    payment_date: "2026-08-06T12:00:00Z",
+    amount: 115000,
+    payment_method: "TRANSFER",
+    reference_number: "SHOPEE-PAY-GRESS-01",
+    notes: "Penyelesaian transaksi Shopee pesanan Ollie Gress (Uang bersih diterima Rp 94.775)",
+    created_at: "2026-08-06T12:00:00Z",
+  },
+  {
+    id: "pay-04",
+    order_id: "ord-10",
+    payment_date: "2026-08-14T10:30:00Z",
+    amount: 100000,
+    payment_method: "TRANSFER",
+    reference_number: "TF-RAJJIL-01",
+    notes: "Pelunasan transfer lampu Lumi Rajjil (Palangka Raya)",
+    created_at: "2026-08-14T10:30:00Z",
+  },
+  {
+    id: "pay-05",
+    order_id: "ord-11",
+    payment_date: "2026-08-15T12:00:00Z",
+    amount: 140000,
+    payment_method: "TRANSFER",
+    reference_number: "SHOPEE-PAY-SAHAL-01",
+    notes: "Penyelesaian transaksi Shopee pesanan Nomi Sahal Depok (Uang bersih diterima Rp 115.650)",
+    created_at: "2026-08-15T12:00:00Z",
+  },
+  {
+    id: "pay-06",
+    order_id: "ord-12",
+    payment_date: "2026-08-16T14:30:00Z",
+    amount: 150000,
+    payment_method: "TRANSFER",
+    reference_number: "TF-ARYADI-01",
+    notes: "Pelunasan transfer pesanan Ollie Bang Aryadi (Palangka Raya)",
+    created_at: "2026-08-16T14:30:00Z",
+  },
+  {
+    id: "pay-07",
+    order_id: "ord-13",
+    payment_date: "2026-08-17T17:00:00Z",
+    amount: 150000,
+    payment_method: "TRANSFER",
+    reference_number: "SHOPEE-PAY-TUTOKE-01",
+    notes: "Penyelesaian transaksi Shopee pesanan Ollie tutoke706 Bali (Uang bersih diterima Rp 124.000)",
+    created_at: "2026-08-17T17:00:00Z",
+  },
+];
+
+// Semua Pembayaran Kas Terverifikasi (Total: Rp 945.000 dari 7 Pesanan Lunas)
+export const ALL_PAYMENTS: Payment[] = [
+  ...INITIAL_PAYMENTS,
+  ...STORE_PAYMENTS,
+];
+
 
 // Operational Expense Categories (Template ELS Studio & Database Seed)
 export const INITIAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -833,69 +1251,8 @@ export const INITIAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
   },
 ];
 
-// Initial Operational Expenses
-export const INITIAL_EXPENSES: Expense[] = [
-  {
-    id: "exp-01",
-    expense_date: "2026-08-02",
-    category_id: "exp-cat-03",
-    description: "Langganan Internet Studio Indihome & Cloud",
-    amount: 250000,
-    payment_method: "TRANSFER",
-    is_capital_expenditure: false,
-    notes: "Biaya koneksi operasional dan transfer slicing file",
-    created_at: "2026-08-02T10:00:00Z",
-    category: INITIAL_EXPENSE_CATEGORIES[2],
-  },
-  {
-    id: "exp-02",
-    expense_date: "2026-08-03",
-    category_id: "exp-cat-02",
-    description: "Token Listrik Ruang Studio Non-Produksi",
-    amount: 150000,
-    payment_method: "TRANSFER",
-    is_capital_expenditure: false,
-    notes: "Penerangan studio, laptop, dan kipas ventilasi",
-    created_at: "2026-08-03T11:00:00Z",
-    category: INITIAL_EXPENSE_CATEGORIES[1],
-  },
-  {
-    id: "exp-03",
-    expense_date: "2026-08-04",
-    category_id: "exp-cat-01",
-    description: "Meta Ads & Promosi Instagram Peluncuran Studio",
-    amount: 300000,
-    payment_method: "TRANSFER",
-    is_capital_expenditure: false,
-    notes: "Target audiens Kalimantan Tengah & sekitarnya",
-    created_at: "2026-08-04T14:00:00Z",
-    category: INITIAL_EXPENSE_CATEGORIES[0],
-  },
-  {
-    id: "exp-04",
-    expense_date: "2026-08-05",
-    category_id: "exp-cat-04",
-    description: "Pelumas Nozzle & Isopropyl Alcohol (IPA) Pembersih Bed",
-    amount: 120000,
-    payment_method: "TRANSFER",
-    is_capital_expenditure: false,
-    notes: "Perawatan berkala mesin Bambulab dan Anycubic",
-    created_at: "2026-08-05T09:00:00Z",
-    category: INITIAL_EXPENSE_CATEGORIES[3],
-  },
-  {
-    id: "exp-05",
-    expense_date: "2026-08-06",
-    category_id: "exp-cat-05",
-    description: "Lakban Fragile & Spidol Penanda Packing Pengiriman",
-    amount: 55000,
-    payment_method: "CASH",
-    is_capital_expenditure: false,
-    notes: "Perlengkapan packing paket kurir",
-    created_at: "2026-08-06T15:30:00Z",
-    category: INITIAL_EXPENSE_CATEGORIES[4],
-  },
-];
+// Initial Operational Expenses (Kosong: seluruh beban operasional riil dicatat di STORE_EXPENSES dari data/moral_lab_expenses.csv)
+export const INITIAL_EXPENSES: Expense[] = [];
 
 // Initial Stock Movements (Pengadaan Awal Modal Bahan Baku)
 export const INITIAL_STOCK_MOVEMENTS: StockMovement[] = [
@@ -967,8 +1324,212 @@ export const INITIAL_STOCK_MOVEMENTS: StockMovement[] = [
     material_id: "mat-08",
     movement_type: "PURCHASE",
     quantity: 100,
-    notes: "Saldo awal pengadaan 100 pcs stiker label branding Casa Moral",
+    reference_id: "pur-03",
+    notes: "Saldo awal pengadaan 2 roll (100 meter) kertas packing honeycomb",
     created_at: "2026-08-01T08:00:00Z",
   },
 ];
+
+// Pengeluaran Operasional Riil Toko (10 Items dari data/moral_lab_expenses.csv, Total = Rp 1.211.091)
+// Tanpa duplikasi dengan modal/aset (Canva, Iklan Shopee/TikTok/Meta, dan Sparepart Maintenance A1 Mini)
+export const STORE_EXPENSES: Expense[] = [
+  {
+    id: "exp-01",
+    expense_date: "2026-10-18",
+    category_id: "exp-cat-03",
+    description: "Canva Pro Lite",
+    amount: 35000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BCA — Langganan desain grafis & materi promosi toko",
+    created_at: "2026-10-18T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[2],
+  },
+  {
+    id: "exp-02",
+    expense_date: "2026-10-20",
+    category_id: "exp-cat-01",
+    description: "Promosi Video Tiktok Casa Moral (Video Ollie)",
+    amount: 65000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BCA — Promosi video konten lampu ambient Ollie",
+    created_at: "2026-10-20T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-03",
+    expense_date: "2026-10-22",
+    category_id: "exp-cat-01",
+    description: "Iklan Produk Shopee (Batch 1)",
+    amount: 112000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BRI — Top-up saldo iklan produk Shopee",
+    created_at: "2026-10-22T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-04",
+    expense_date: "2026-10-27",
+    category_id: "exp-cat-01",
+    description: "Iklan Produk Shopee (Isi saldo Rp250.000 + PPN Rp27.500)",
+    amount: 278500,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BCA — Isi saldo Rp250.000 ppn 27,500",
+    created_at: "2026-10-27T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-05",
+    expense_date: "2026-10-29",
+    category_id: "exp-cat-01",
+    description: "Promosi Produk Tiktok Lyra",
+    amount: 152649,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BCA — Promosi produk TikTok Lyra",
+    created_at: "2026-10-29T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-06",
+    expense_date: "2026-10-30",
+    category_id: "exp-cat-01",
+    description: "Meta Ads Casa Moral",
+    amount: 200000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BCA — Iklan Meta Ads Casa Moral",
+    created_at: "2026-10-30T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-07",
+    expense_date: "2026-10-31",
+    category_id: "exp-cat-01",
+    description: "Promosi Video Tiktok Casa Moral (Batch 1)",
+    amount: 63492,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BRI — Promosi video TikTok Casa Moral",
+    created_at: "2026-10-31T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-08",
+    expense_date: "2026-10-31",
+    category_id: "exp-cat-01",
+    description: "Promosi Video Tiktok Casa Moral (Batch 2)",
+    amount: 36350,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BRI — Promosi video TikTok Casa Moral",
+    created_at: "2026-10-31T14:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-09",
+    expense_date: "2026-11-04",
+    category_id: "exp-cat-01",
+    description: "Iklan Shopee (November)",
+    amount: 223000,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: SeaBank — Top-up saldo iklan Shopee",
+    created_at: "2026-11-04T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[0],
+  },
+  {
+    id: "exp-10",
+    expense_date: "2026-11-06",
+    category_id: "exp-cat-04",
+    description: "A1 Mini hotend insulation pad",
+    amount: 45100,
+    payment_method: "TRANSFER",
+    is_capital_expenditure: false,
+    notes: "Akun: BRI — Beli di 3d, karetnya rusak (sparepart maintenance)",
+    created_at: "2026-11-06T10:00:00Z",
+    category: INITIAL_EXPENSE_CATEGORIES[3],
+  },
+];
+
+export const ALL_EXPENSES: Expense[] = [
+  ...INITIAL_EXPENSES,
+  ...STORE_EXPENSES,
+];
+
+// Mutasi Stok Masuk dari Belanja Riil Toko
+export const STORE_STOCK_MOVEMENTS: StockMovement[] = [
+  {
+    id: "mov-09",
+    material_id: "mat-01",
+    movement_type: "PURCHASE",
+    quantity: 2000,
+    reference_id: "pur-01",
+    notes: "Pembelian 2 spool IndoCart PLA Basic Dark Red (+2.000g)",
+    created_at: "2026-08-06T10:00:00Z",
+  },
+  {
+    id: "mov-10",
+    material_id: "mat-02",
+    movement_type: "PURCHASE",
+    quantity: 10,
+    reference_id: "pur-04",
+    notes: "Pembelian 10 pcs Lampu Inlite 3W Warm White",
+    created_at: "2026-08-06T11:00:00Z",
+  },
+  {
+    id: "mov-11",
+    material_id: "mat-01",
+    movement_type: "PURCHASE",
+    quantity: 2000,
+    reference_id: "pur-05",
+    notes: "Pembelian 1 spool IndoCart Yellow + 1 spool Dark Red (+2.000g)",
+    created_at: "2026-08-07T12:00:00Z",
+  },
+  {
+    id: "mov-12",
+    material_id: "mat-01",
+    movement_type: "PURCHASE",
+    quantity: 2000,
+    reference_id: "pur-14",
+    notes: "Pembelian 2 spool IndoCart PLA Basic White (+2.000g)",
+    created_at: "2026-08-10T14:00:00Z",
+  },
+  {
+    id: "mov-13",
+    material_id: "mat-01",
+    movement_type: "PURCHASE",
+    quantity: 3000,
+    reference_id: "pur-18",
+    notes: "Pembelian 2 spool IndoCart PLA Basic Orange + 1 spool PLA Matte Matcha (+3.000g)",
+    created_at: "2026-08-12T15:00:00Z",
+  },
+  {
+    id: "mov-14",
+    material_id: "mat-03",
+    movement_type: "PURCHASE",
+    quantity: 10,
+    reference_id: "pur-19",
+    notes: "Pembelian 10 pcs Fitting Lampu E27",
+    created_at: "2026-08-13T16:00:00Z",
+  },
+  {
+    id: "mov-15",
+    material_id: "mat-04",
+    movement_type: "PURCHASE",
+    quantity: 10,
+    reference_id: "pur-19",
+    notes: "Pembelian 10 pcs Kabel Sakelar On/Off",
+    created_at: "2026-08-13T16:00:00Z",
+  },
+];
+
+export const ALL_STOCK_MOVEMENTS: StockMovement[] = [
+  ...INITIAL_STOCK_MOVEMENTS,
+  ...STORE_STOCK_MOVEMENTS,
+];
+
 

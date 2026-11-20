@@ -15,8 +15,8 @@ import { getPayments, createPayment, resetMemoryPayments } from "../src/lib/serv
 
 describe("Sprint 4 — Order and Production Management Tests", () => {
   beforeEach(() => {
-    resetMemoryOrders();
-    resetMemoryPayments();
+    resetMemoryOrders(true);
+    resetMemoryPayments(true);
   });
 
   describe("1. Historical Orders Integrity (Sheet: Orderan Casa Moral.xlsx)", () => {
@@ -157,6 +157,49 @@ describe("Sprint 4 — Order and Production Management Tests", () => {
       // 4% ongkir xtra = 6.000 (under 10.000 cap)
       // Total fee = 18.000
       expect(shopeeOrder.platform_fee).toBe(18000);
+    });
+
+    it("should compute TikTok Shop platform fee accurately (8.0% komisi + Rp 1.250 proses + 0.5% PPh 22)", async () => {
+      const tiktokOrder = await createOrder({
+        customer_name: "TikTok Buyer Jakarta",
+        channel: "TikTokShop",
+        items: [
+          {
+            product_id: "prod-02", // Ollie (Rp 130.000)
+            quantity: 1,
+            unit_price: 130000,
+          },
+        ],
+      });
+
+      // Total = 130.000
+      // 8.0% Komisi = 10.400
+      // Rp 1.250 Biaya Proses
+      // 0.5% PPh 22 = 650
+      // Total Fee = 12.300
+      expect(tiktokOrder.total_amount).toBe(130000);
+      expect(tiktokOrder.platform_fee).toBe(12300);
+      expect(tiktokOrder.channel).toBe("TikTokShop");
+    });
+
+    it("should compute Tokopedia platform fee accurately (8.0% layanan + Rp 1.250 proses + 0.5% PPh 22)", async () => {
+      const tokpedOrder = await createOrder({
+        customer_name: "Tokopedia Buyer Bandung",
+        channel: "Tokopedia",
+        items: [
+          {
+            product_id: "prod-02", // Ollie (Rp 130.000)
+            quantity: 1,
+            unit_price: 130000,
+          },
+        ],
+      });
+
+      // Total = 130.000
+      // Total Fee = 8.5% * 130.000 + 1.250 = 11.050 + 1.250 = 12.300
+      expect(tokpedOrder.total_amount).toBe(130000);
+      expect(tokpedOrder.platform_fee).toBe(12300);
+      expect(tokpedOrder.channel).toBe("Tokopedia");
     });
 
     it("should reject creation when items array is empty", async () => {

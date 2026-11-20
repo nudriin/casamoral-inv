@@ -28,17 +28,16 @@ VALUES
     ('33333333-3333-3333-3333-333333333304', 'Kabel Sakelar On/Off', 'electrical', 'pcs', 20, 5, 10000, 'Shopee'),
     ('33333333-3333-3333-3333-333333333305', 'Karet Pelindung Kabel', 'electrical', 'pcs', 30, 5, 700, 'Shopee'),
     ('33333333-3333-3333-3333-333333333306', 'Kardus Kemasan Karton 20x20x20', 'packaging', 'pcs', 20, 5, 4500, 'Shopee'),
-    ('33333333-3333-3333-3333-333333333307', 'Bubble Wrap Roll 30cm x 50m', 'packaging', 'meter', 50, 5, 1500, 'Shopee'),
-    ('33333333-3333-3333-3333-333333333308', 'Sticker Label / Branding', 'packaging', 'pcs', 100, 10, 1000, 'Percetakan')
+    ('33333333-3333-3333-3333-333333333307', 'Bubble Wrap Roll 30cm x 50m', 'packaging', 'meter', 50, 5, 1500, 'Shopee')
 ON CONFLICT DO NOTHING;
 
--- 4. Initial Assets (from Table 3: Capital Purchases)
+-- 4. Initial Assets (from data/moral_lab_expenses.csv)
 INSERT INTO public.assets (id, name, category, purchase_date, purchase_price, residual_value, useful_life_months, estimated_hours_per_month, power_watts, status)
 VALUES
-    ('44444444-4444-4444-4444-444444444401', 'Mesin Bambulab A1 Mini', 'printer_3d', '2026-08-01', 3589221, 500000, 24, 150, 60, 'ACTIVE'),
-    ('44444444-4444-4444-4444-444444444402', 'Mesin Anycubic Kobra X', 'printer_3d', '2026-08-01', 5872800, 500000, 24, 150, 110, 'ACTIVE'),
-    ('44444444-4444-4444-4444-444444444403', 'Jangka Sorong Digital', 'tool', '2026-08-01', 47499, 0, 24, 50, 0, 'ACTIVE'),
-    ('44444444-4444-4444-4444-444444444404', 'Magnet Neodium Bulat 20Pcs (3 set)', 'tool', '2026-08-01', 47000, 0, 24, 50, 0, 'ACTIVE')
+    ('44444444-4444-4444-4444-444444444401', 'Mesin Bambulab A1 Mini', 'printer_3d', '2026-09-23', 3589221, 500000, 24, 150, 60, 'ACTIVE'),
+    ('44444444-4444-4444-4444-444444444402', 'Mesin Anycubic Kobra X', 'printer_3d', '2026-10-14', 5870800, 500000, 24, 150, 110, 'ACTIVE'),
+    ('44444444-4444-4444-4444-444444444403', 'Vernier Caliper (Sigma/Jangka Sorong)', 'tool', '2026-10-13', 48099, 0, 24, 50, 0, 'ACTIVE'),
+    ('44444444-4444-4444-4444-444444444404', 'Magnet Neodymium (60pcs uk 3 x 2)', 'tool', '2026-10-13', 48000, 0, 24, 50, 0, 'ACTIVE')
 ON CONFLICT DO NOTHING;
 
 -- 5. Products (from Table 2: Lumi, Ollie, Kumo, Pomi)

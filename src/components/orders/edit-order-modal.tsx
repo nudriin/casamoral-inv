@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Order, OrderStatus, PaymentStatus, ChannelSource, Product } from "@/types/database";
-import { INITIAL_PRODUCTS, ProductWithBOM } from "@/lib/data/initial-data";
+import { INITIAL_PRODUCTS, ALL_PRODUCTS, ProductWithBOM } from "@/lib/data/initial-data";
 import { updateOrderAction } from "@/app/orders/actions";
-import { formatRupiah } from "@/lib/utils";
+import { formatRupiah, formatModelName } from "@/lib/utils";
+import { calculatePlatformFee, isMarketplaceChannel, getChannelLabel } from "@/lib/financial/platform-fees";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -52,10 +53,10 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   // Dynamic Product Options mapped from Menu Model / Master Catalog
   const productOptions = useMemo(() => {
-    const list = availableProducts && availableProducts.length > 0 ? availableProducts : INITIAL_PRODUCTS;
+    const list = availableProducts && availableProducts.length > 0 ? availableProducts : ALL_PRODUCTS;
     return list.map((p) => {
-      const cleanName = p.name.replace("Lampu Ambient - ", "").trim();
-      const displayName = p.name.startsWith("Lampu Ambient - ") ? `Model ${cleanName}` : p.name;
+      const cleanName = formatModelName(p);
+      const displayName = `Model ${cleanName}`;
       const hasCap = (p as ProductWithBOM).bom?.capGram !== undefined
         ? ((p as ProductWithBOM).bom?.capGram ?? 0) > 0
         : !cleanName.toLowerCase().includes("lumi");
@@ -83,7 +84,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
   const [shippingCost, setShippingCost] = useState<number>(order.shipping_cost || 0);
   const [discountAmount, setDiscountAmount] = useState<number>(order.discount_amount || 0);
 
-  const [autoShopeeFee, setAutoShopeeFee] = useState<boolean>(order.channel === "Shopee");
+  const [autoMarketplaceFee, setAutoMarketplaceFee] = useState<boolean>(isMarketplaceChannel(order.channel || ""));
   const [platformFee, setPlatformFee] = useState<number>(order.platform_fee || 0);
 
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(order.payment_status || "UNPAID");
@@ -107,27 +108,32 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
       setNotes(order.notes || "");
       setShippingCost(order.shipping_cost || 0);
       setDiscountAmount(order.discount_amount || 0);
-      setAutoShopeeFee(order.channel === "Shopee");
+      setAutoMarketplaceFee(isMarketplaceChannel(order.channel || ""));
       setPlatformFee(order.platform_fee || 0);
       setPaymentStatus(order.payment_status || "UNPAID");
       setPaidAmount(order.paid_amount || 0);
       setErrorMsg(null);
 
-      const mappedItems: EditableOrderItem[] = (order.items || []).map((i) => ({
-        id: i.id,
-        productId: i.product_id || "prod-02",
-        productName: i.product?.name || "Lampu Ambient",
-        quantity: i.quantity || 1,
-        unitPrice: i.unit_price || 0,
-        unitHpp: i.unit_hpp || 89705,
-        colorDetails: i.color_details || "",
-        addOnName: i.add_on_name || "",
-        addOnPrice: i.add_on_price || 0,
-      }));
+      const mappedItems: EditableOrderItem[] = (order.items || []).map((i) => {
+        const matched = productOptions.find((p) => p.id === i.product_id);
+        const modelName = matched?.cleanName || formatModelName(i);
+        return {
+          id: i.id,
+          productId: i.product_id || matched?.id || "prod-02",
+          productName: modelName,
+          quantity: i.quantity || 1,
+          unitPrice: i.unit_price || matched?.price || 0,
+          unitHpp: i.unit_hpp || matched?.hpp || 89705,
+          colorDetails: i.color_details || "",
+          addOnName: i.add_on_name || "",
+          addOnPrice: i.add_on_price || 0,
+        };
+      });
 
       const defaultProd = productOptions[0] || {
         id: "prod-01",
         name: "Model Lumi",
+        cleanName: "Lumi",
         price: 130000,
         hpp: 76950,
         hasCap: false,
@@ -139,7 +145,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
           : [
               {
                 productId: defaultProd.id,
-                productName: defaultProd.name,
+                productName: defaultProd.cleanName,
                 quantity: 1,
                 unitPrice: defaultProd.price,
                 unitHpp: defaultProd.hpp,
@@ -171,18 +177,11 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
 
     // Platform fee calculation
     let computedFee = Number(platformFee) || 0;
-    if (channel === "Shopee" && autoShopeeFee) {
-      if (totalInvoice > 0) {
-        // Toko Casa Moral Shopee Formula: 9.5% + 1.250 + 0.5%
-        const admin = totalInvoice * 0.095;
-        const process = 1250;
-        const pph = totalInvoice * 0.005;
-        computedFee = Math.round(admin + process + pph);
-      } else {
-        computedFee = 0;
-      }
-    } else if (channel !== "Shopee" && autoShopeeFee) {
-      computedFee = 0;
+    let feeLabel = "Manual";
+    if (autoMarketplaceFee) {
+      const breakdown = calculatePlatformFee(channel, totalInvoice);
+      computedFee = breakdown.totalFee;
+      feeLabel = breakdown.label;
     }
 
     const netRealizedRevenue = Math.max(0, totalInvoice - computedFee);
@@ -196,6 +195,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
       addOnTotal,
       totalInvoice,
       computedFee,
+      feeLabel,
       netRealizedRevenue,
       packagingCost,
       rawHpp,
@@ -203,7 +203,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
       netProfit,
       remainingReceivable,
     };
-  }, [items, shippingCost, discountAmount, channel, autoShopeeFee, platformFee, paidAmount, order.packaging_cost]);
+  }, [items, shippingCost, discountAmount, channel, autoMarketplaceFee, platformFee, paidAmount, order.packaging_cost]);
 
   // Handle Preset Model Selection
   const handleSelectPreset = (index: number, selectedId: string) => {
@@ -227,7 +227,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
         return {
           ...it,
           productId: preset.id,
-          productName: preset.name,
+          productName: preset.cleanName,
           unitPrice: preset.price,
           unitHpp: preset.hpp,
           colorDetails: nextColor,
@@ -246,6 +246,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
     const defaultProduct = productOptions[0] || {
       id: "prod-01",
       name: "Model Lumi",
+      cleanName: "Lumi",
       price: 130000,
       hpp: 76950,
       hasCap: false,
@@ -255,7 +256,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
       ...prev,
       {
         productId: defaultProduct.id,
-        productName: defaultProduct.name,
+        productName: defaultProduct.cleanName,
         quantity: 1,
         unitPrice: defaultProduct.price,
         unitHpp: defaultProduct.hpp,
@@ -326,7 +327,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
         shipping_cost: Number(shippingCost) || 0,
         discount_amount: Number(discountAmount) || 0,
         platform_fee: financials.computedFee,
-        recalculate_platform_fee: autoShopeeFee,
+        recalculate_platform_fee: autoMarketplaceFee,
         payment_status: paymentStatus,
         paid_amount: Number(paidAmount) || 0,
       });
@@ -416,12 +417,14 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
                   onChange={(e) => {
                     const nextChan = e.target.value as ChannelSource;
                     setChannel(nextChan);
-                    if (nextChan === "Shopee") setAutoShopeeFee(true);
+                    if (isMarketplaceChannel(nextChan)) setAutoMarketplaceFee(true);
                   }}
                   className="w-full h-8 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2.5 text-xs font-semibold"
                 >
                   <option value="Direct">Direct</option>
-                  <option value="Shopee">Shopee Marketplace</option>
+                  <option value="Shopee">Shopee</option>
+                  <option value="TikTokShop">TikTok Shop</option>
+                  <option value="Tokopedia">Tokopedia</option>
                   <option value="WhatsApp">WhatsApp</option>
                   <option value="Instagram">Instagram</option>
                   <option value="Other">Lainnya</option>
@@ -557,6 +560,7 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
                       <label className="block text-[11px] text-zinc-500 mb-0.5">Nama Model Produk</label>
                       <Input
                         type="text"
+                        placeholder="Misal: Ollie"
                         value={item.productName}
                         onChange={(e) => handleItemChange(idx, "productName", e.target.value)}
                         className="h-7 text-xs font-medium"
@@ -675,30 +679,30 @@ export function EditOrderModal({ order, isOpen, onClose, onSaved, onDeleted, ava
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-zinc-600 dark:text-zinc-400 font-medium">
-                    Potongan Shopee (Rp)
+                    Potongan Fee {getChannelLabel(channel)} (Rp)
                   </label>
-                  {channel === "Shopee" && (
+                  {isMarketplaceChannel(channel) && (
                     <button
                       type="button"
-                      onClick={() => setAutoShopeeFee(!autoShopeeFee)}
+                      onClick={() => setAutoMarketplaceFee(!autoMarketplaceFee)}
                       className="text-[10px] text-amber-600 hover:underline flex items-center gap-0.5 cursor-pointer"
                     >
                       <RefreshCw className="w-2.5 h-2.5" />
-                      {autoShopeeFee ? "Otomatis Toko (9.5%+1250+0.5%)" : "Manual"}
+                      {autoMarketplaceFee ? `Otomatis (${financials.feeLabel})` : "Manual"}
                     </button>
                   )}
                 </div>
                 <Input
                   type="number"
                   min="0"
-                  disabled={channel === "Shopee" && autoShopeeFee}
+                  disabled={isMarketplaceChannel(channel) && autoMarketplaceFee}
                   value={financials.computedFee}
                   onChange={(e) => {
-                    setAutoShopeeFee(false);
+                    setAutoMarketplaceFee(false);
                     setPlatformFee(Number(e.target.value));
                   }}
                   className={`h-8 text-xs font-mono ${
-                    channel === "Shopee" && autoShopeeFee ? "bg-zinc-100 dark:bg-zinc-800" : ""
+                    isMarketplaceChannel(channel) && autoMarketplaceFee ? "bg-zinc-100 dark:bg-zinc-800" : ""
                   }`}
                 />
               </div>

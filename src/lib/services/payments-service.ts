@@ -1,4 +1,4 @@
-import { INITIAL_PAYMENTS } from "@/lib/data/initial-data";
+import { INITIAL_PAYMENTS, STORE_PAYMENTS, ALL_PAYMENTS } from "@/lib/data/initial-data";
 import { Payment, PaymentMethod, PaymentStatus, Order } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEnvStatus } from "@/lib/env";
@@ -6,7 +6,7 @@ import { getOrderById, updateOrderPayment } from "./orders-service";
 import Decimal from "decimal.js";
 
 // In-memory store for fallback & testing
-let memoryPayments: Payment[] = JSON.parse(JSON.stringify(INITIAL_PAYMENTS));
+let memoryPayments: Payment[] = JSON.parse(JSON.stringify(ALL_PAYMENTS));
 
 export interface CreatePaymentPayload {
   order_id: string;
@@ -237,6 +237,10 @@ export async function deletePaymentsByOrderId(orderId: string): Promise<number> 
 /**
  * Reset memory payments (used for automated test cleanup)
  */
-export function resetMemoryPayments(): void {
-  memoryPayments = JSON.parse(JSON.stringify(INITIAL_PAYMENTS));
+export function resetMemoryPayments(initialOnly = false): void {
+  if (initialOnly) {
+    memoryPayments = JSON.parse(JSON.stringify(INITIAL_PAYMENTS));
+  } else {
+    memoryPayments = JSON.parse(JSON.stringify(ALL_PAYMENTS));
+  }
 }

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS public.customers (
     phone TEXT,
     address TEXT,
     city TEXT,
-    channel_source TEXT NOT NULL DEFAULT 'Direct' CHECK (channel_source IN ('Direct', 'Shopee', 'WhatsApp', 'Instagram', 'Other')),
+    channel_source TEXT NOT NULL DEFAULT 'Direct' CHECK (channel_source IN ('Direct', 'Shopee', 'TikTokShop', 'Tokopedia', 'WhatsApp', 'Instagram', 'Other')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     order_number TEXT NOT NULL UNIQUE,
     order_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
-    channel TEXT NOT NULL DEFAULT 'Direct' CHECK (channel IN ('Direct', 'Shopee', 'WhatsApp', 'Instagram', 'Other')),
+    channel TEXT NOT NULL DEFAULT 'Direct' CHECK (channel IN ('Direct', 'Shopee', 'TikTokShop', 'Tokopedia', 'WhatsApp', 'Instagram', 'Other')),
     status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'SHIPPED', 'COMPLETED', 'CANCELLED')),
     subtotal_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
     add_on_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,

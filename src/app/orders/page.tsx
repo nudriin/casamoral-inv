@@ -40,7 +40,7 @@ export default async function OrdersPage() {
             </h1>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Pencatatan pesanan omnichannel (Direct & Shopee), kustomisasi warna, add-on, dan tracking produksi studio.
+            Pencatatan pesanan omnichannel (Direct, Shopee, TikTok Shop, Tokopedia), kustomisasi warna, add-on, dan tracking produksi studio.
           </p>
         </div>
 
@@ -123,18 +123,25 @@ export default async function OrdersPage() {
                 <Layers className="w-4 h-4" />
               </span>
             </div>
-            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mt-2 flex items-center gap-2">
-              <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold text-base">
+            <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">
                 {stats.channelCounts["Direct"] || 0} Direct
               </span>
               <span className="text-zinc-300 dark:text-zinc-700">•</span>
-              <span className="font-mono text-orange-600 dark:text-orange-400 font-bold text-base">
+              <span className="font-mono text-orange-600 dark:text-orange-400 font-bold">
                 {stats.channelCounts["Shopee"] || 0} Shopee
               </span>
+              <span className="text-zinc-300 dark:text-zinc-700">•</span>
+              <span className="font-mono text-zinc-800 dark:text-zinc-200 font-bold">
+                {stats.channelCounts["TikTokShop"] || 0} TikTok
+              </span>
+              <span className="text-zinc-300 dark:text-zinc-700">•</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                {stats.channelCounts["Tokopedia"] || 0} Tokped
+              </span>
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1 flex items-center justify-between">
-              <span>Direct Rp 815.000</span>
-              <span className="text-orange-600 font-medium">Shopee Rp 130.000</span>
+            <div className="text-[10px] text-zinc-500 mt-1 flex items-center justify-between">
+              <span>Omnichannel Marketplace & Direct</span>
             </div>
           </CardContent>
         </Card>

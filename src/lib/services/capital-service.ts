@@ -1,4 +1,12 @@
-import { INITIAL_CAPITAL_PURCHASES, INITIAL_ASSETS, CapitalPurchaseItem } from "@/lib/data/initial-data";
+import {
+  INITIAL_CAPITAL_PURCHASES,
+  STORE_PURCHASES,
+  ALL_CAPITAL_PURCHASES,
+  INITIAL_ASSETS,
+  STORE_ASSETS,
+  ALL_ASSETS,
+  CapitalPurchaseItem,
+} from "@/lib/data/initial-data";
 import { Asset } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEnvStatus } from "@/lib/env";
@@ -12,10 +20,13 @@ export interface CapitalBreakdown {
 }
 
 // In-memory store for fallback/demo
-let inMemoryAssets: Asset[] = [...INITIAL_ASSETS];
-const inMemoryPurchases: CapitalPurchaseItem[] = [...INITIAL_CAPITAL_PURCHASES];
+let inMemoryAssets: Asset[] = [...ALL_ASSETS];
+let inMemoryPurchases: CapitalPurchaseItem[] = [...ALL_CAPITAL_PURCHASES];
 
-export async function getCapitalPurchases(): Promise<CapitalPurchaseItem[]> {
+export async function getCapitalPurchases(options?: { initialOnly?: boolean }): Promise<CapitalPurchaseItem[]> {
+  if (options?.initialOnly) {
+    return [...INITIAL_CAPITAL_PURCHASES];
+  }
   return inMemoryPurchases;
 }
 
@@ -117,8 +128,8 @@ export async function deleteAsset(id: string): Promise<boolean> {
   return inMemoryAssets.length < initialLen;
 }
 
-export async function getCapitalSummary() {
-  const purchases = await getCapitalPurchases();
+export async function getCapitalSummary(options?: { initialOnly?: boolean }) {
+  const purchases = await getCapitalPurchases(options);
   const totalAmount = purchases.reduce((sum, item) => sum + item.totalCost, 0);
 
   const categories: Record<string, { label: string; total: number; count: number }> = {
@@ -127,6 +138,7 @@ export async function getCapitalSummary() {
     KELISTRIKAN: { label: "Komponen Kelistrikan & Lampu", total: 0, count: 0 },
     KEMASAN: { label: "Kemasan & Packaging", total: 0, count: 0 },
     ALAT: { label: "Peralatan & Tools", total: 0, count: 0 },
+    OPERASIONAL: { label: "Iklan, Software & Operasional", total: 0, count: 0 },
   };
 
   purchases.forEach((item) => {
@@ -150,3 +162,14 @@ export async function getCapitalSummary() {
     breakdown,
   };
 }
+
+export function resetMemoryCapital(initialOnly = false) {
+  if (initialOnly) {
+    inMemoryAssets = [...INITIAL_ASSETS];
+    inMemoryPurchases = [...INITIAL_CAPITAL_PURCHASES];
+  } else {
+    inMemoryAssets = [...ALL_ASSETS];
+    inMemoryPurchases = [...ALL_CAPITAL_PURCHASES];
+  }
+}
+

@@ -1,5 +1,7 @@
 import { createAdminClient } from "../src/lib/supabase/admin";
 import {
+  ALL_CAPITAL_PURCHASES,
+  ALL_EXPENSES,
   INITIAL_MATERIALS,
   INITIAL_PRODUCTS,
   INITIAL_ASSETS,
@@ -141,13 +143,16 @@ async function runImport() {
   console.log("\n====================================================");
   console.log("RINGKASAN REKONSILIASI HASIL IMPORT (SPRINT 2 & 4):");
   console.log("----------------------------------------------------");
-  const totalModal = INITIAL_CAPITAL_PURCHASES.reduce((sum, item) => sum + item.totalCost, 0);
+  const totalModal = ALL_CAPITAL_PURCHASES.reduce((sum, item) => sum + item.totalCost, 0);
+  const totalBeban = ALL_EXPENSES.reduce((sum, item) => sum + item.amount, 0);
   const totalOrderVolume = INITIAL_ORDERS.reduce((sum, o) => sum + o.total_amount, 0);
   const totalCashPaid = INITIAL_ORDERS.reduce((sum, o) => sum + o.paid_amount, 0);
   const totalPiutang = totalOrderVolume - totalCashPaid;
 
-  console.log(`- Total Modal Belanja: Rp ${totalModal.toLocaleString("id-ID")} (Target: Rp 11.440.748)`);
-  console.log(`- Jumlah Transaksi Modal: ${INITIAL_CAPITAL_PURCHASES.length} item (Target: 23 item)`);
+  console.log(`- Total Modal & Bahan Belanja: Rp ${totalModal.toLocaleString("id-ID")} (Target CSV: Rp 14.811.820)`);
+  console.log(`- Jumlah Transaksi Modal: ${ALL_CAPITAL_PURCHASES.length} item (Target: 43 item)`);
+  console.log(`- Total Beban Operasional: Rp ${totalBeban.toLocaleString("id-ID")} (Target CSV: Rp 1.211.091 across ${ALL_EXPENSES.length} item)`);
+  console.log(`- Grand Total Moral Lab CSV: Rp ${(totalModal + totalBeban).toLocaleString("id-ID")} (Target CSV: Rp 16.022.911)`);
   console.log(`- Jumlah Model Lampu: ${INITIAL_PRODUCTS.length} model (Lumi, Ollie, Kumo, Pomi)`);
   console.log(`- Total Volume Pesanan: Rp ${totalOrderVolume.toLocaleString("id-ID")} (Target: Rp 945.000)`);
   console.log(`- Realisasi Kas Masuk: Rp ${totalCashPaid.toLocaleString("id-ID")} (Target: Rp 290.000)`);

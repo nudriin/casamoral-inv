@@ -24,9 +24,9 @@ import { calculatePriceFromMarkup } from "../src/lib/financial/pricing-calculato
 
 describe("Sprint 7 — End-to-End Integration & User Journey Verification", () => {
   beforeEach(() => {
-    resetMemoryOrders();
-    resetMemoryMaterials();
-    resetMemoryPayments();
+    resetMemoryOrders(true);
+    resetMemoryMaterials(true);
+    resetMemoryPayments(true);
   });
 
   it("should successfully execute full end-to-end business lifecycle from materials to financial reports", async () => {

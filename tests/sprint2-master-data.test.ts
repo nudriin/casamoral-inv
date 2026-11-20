@@ -8,20 +8,20 @@ import {
 import { getCapitalSummary } from "@/lib/services/capital-service";
 
 describe("Sprint 2: Master Data & Reconciliation Test Suite", () => {
-  it("reconciles capital purchases to exactly Rp 11.440.748 across 23 items", () => {
-    expect(INITIAL_CAPITAL_PURCHASES).toHaveLength(23);
+  it("reconciles initial capital purchases (23 Sep - 14 Oct 2026) to exactly Rp 11.546.443 across 20 items", () => {
+    expect(INITIAL_CAPITAL_PURCHASES).toHaveLength(20);
 
     const totalSum = INITIAL_CAPITAL_PURCHASES.reduce(
       (sum, item) => sum + item.totalCost,
       0
     );
-    expect(totalSum).toBe(11440748);
+    expect(totalSum).toBe(11546443);
   });
 
   it("reconciles category breakdown of initial capital accurately", async () => {
-    const summary = await getCapitalSummary();
-    expect(summary.totalCapital).toBe(11440748);
-    expect(summary.totalItems).toBe(23);
+    const summary = await getCapitalSummary({ initialOnly: true });
+    expect(summary.totalCapital).toBe(11546443);
+    expect(summary.totalItems).toBe(20);
 
     const mesin = summary.breakdown.find((b) => b.category === "MESIN");
     const filamen = summary.breakdown.find((b) => b.category === "FILAMEN");
@@ -29,14 +29,14 @@ describe("Sprint 2: Master Data & Reconciliation Test Suite", () => {
     const kemasan = summary.breakdown.find((b) => b.category === "KEMASAN");
     const alat = summary.breakdown.find((b) => b.category === "ALAT");
 
-    expect(mesin?.totalCost).toBe(9462021); // A1 Mini + Kobra X
-    expect(filamen?.totalCost).toBe(1339561); // 10 rolls of filament
-    expect(kelistrikan?.totalCost).toBe(442450); // Fittings, switches, bulb
-    expect(kemasan?.totalCost).toBe(102217); // Boxes + bubble wrap
-    expect(alat?.totalCost).toBe(94499); // Caliper + magnets
+    expect(mesin?.totalCost).toBe(9460021); // A1 Mini (3.589.221) + Anycubic Kobra X (5.870.800)
+    expect(filamen?.totalCost).toBe(1284218); // 4 eSUN PETG bundle (499.088) + PETG/PLA Putih (261.130) + PLA (524.000)
+    expect(kelistrikan?.totalCost).toBe(448888); // Fittings, switches, bulb, kabel pelindung
+    expect(kemasan?.totalCost).toBe(257217); // Silica gel, plastik klip, kardus, bubble wrap
+    expect(alat?.totalCost).toBe(96099); // Vernier caliper + magnet neodymium
 
     const sumOfBreakdown = summary.breakdown.reduce((sum, b) => sum + b.totalCost, 0);
-    expect(sumOfBreakdown).toBe(11440748);
+    expect(sumOfBreakdown).toBe(11546443);
   });
 
   it("verifies 4 master lamp models with exact HPP matching Excel formulas", () => {
@@ -88,7 +88,7 @@ describe("Sprint 2: Master Data & Reconciliation Test Suite", () => {
   });
 
   it("verifies master materials and stock parameters", () => {
-    expect(INITIAL_MATERIALS.length).toBeGreaterThanOrEqual(8);
+    expect(INITIAL_MATERIALS.length).toBeGreaterThanOrEqual(7);
 
     const filament = INITIAL_MATERIALS.find((m) => m.category === "filament");
     expect(filament).toBeDefined();
@@ -111,7 +111,7 @@ describe("Sprint 2: Master Data & Reconciliation Test Suite", () => {
     expect(bambu?.power_watts).toBe(60);
 
     expect(anycubic).toBeDefined();
-    expect(anycubic?.purchase_price).toBe(5872800);
+    expect(anycubic?.purchase_price).toBe(5870800);
     expect(anycubic?.power_watts).toBe(110);
   });
 });

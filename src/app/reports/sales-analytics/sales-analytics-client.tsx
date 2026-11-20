@@ -265,26 +265,50 @@ export function SalesAnalyticsClient({ analytics }: SalesAnalyticsClientProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-4">
-            {analytics.channels.map((ch) => (
-              <div key={ch.channel} className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                    {ch.channel === "Direct" ? "Direct Customer (WhatsApp / Offline)" : "Marketplace (Shopee)"}
-                  </span>
-                  <span className="font-mono text-zinc-600 dark:text-zinc-400">
-                    {formatRupiah(ch.revenue)} ({ch.ordersCount} pesanan • {ch.percentage}%)
-                  </span>
+            {analytics.channels.map((ch) => {
+              const norm = ch.channel.toLowerCase().replace(/\s+/g, "");
+              let label = ch.channel;
+              let barColor = "bg-blue-500";
+
+              if (norm === "direct") {
+                label = "Direct Customer (Offline / Sukamara)";
+                barColor = "bg-emerald-500";
+              } else if (norm === "shopee") {
+                label = "Marketplace Shopee";
+                barColor = "bg-orange-500";
+              } else if (norm === "tiktokshop" || norm === "tiktok") {
+                label = "Marketplace TikTok Shop";
+                barColor = "bg-zinc-800 dark:bg-zinc-200";
+              } else if (norm === "tokopedia") {
+                label = "Marketplace Tokopedia";
+                barColor = "bg-emerald-600";
+              } else if (norm === "whatsapp") {
+                label = "WhatsApp Direct";
+                barColor = "bg-green-500";
+              } else if (norm === "instagram") {
+                label = "Instagram DM";
+                barColor = "bg-fuchsia-500";
+              }
+
+              return (
+                <div key={ch.channel} className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                      {label}
+                    </span>
+                    <span className="font-mono text-zinc-600 dark:text-zinc-400">
+                      {formatRupiah(ch.revenue)} ({ch.ordersCount} pesanan • {ch.percentage}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${barColor}`}
+                      style={{ width: `${ch.percentage}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${
-                      ch.channel === "Direct" ? "bg-emerald-500" : "bg-orange-500"
-                    }`}
-                    style={{ width: `${ch.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 

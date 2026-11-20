@@ -24,10 +24,10 @@ import {
 
 describe("Sprint 5 — Sales, Expenses, and Inventory Management Tests", () => {
   beforeEach(() => {
-    resetMemoryOrders();
-    resetMemoryPayments();
-    resetMemoryExpenses();
-    resetMemoryMaterials();
+    resetMemoryOrders(true);
+    resetMemoryPayments(true);
+    resetMemoryExpenses(false);
+    resetMemoryMaterials(true);
   });
 
   describe("1. Receivables (Piutang) & Initial Balance Verification", () => {
@@ -204,17 +204,17 @@ describe("Sprint 5 — Sales, Expenses, and Inventory Management Tests", () => {
   });
 
   describe("4. Operational Expenses Management", () => {
-    it("should accurately reflect initial operational expenses of Rp 875.000", async () => {
+    it("should accurately reflect CSV operational expenses of Rp 1.211.091 across 10 items", async () => {
       const summary = await getExpensesSummary();
-      expect(summary.totalExpenses).toBe(875000);
-      expect(summary.fixedCostsTotal).toBe(820000); // Internet 250k + Listrik 150k + Ads 300k + Maintenance 120k
-      expect(summary.variableCostsTotal).toBe(55000); // Lakban & spidol
-      expect(summary.count).toBe(5);
+      expect(summary.totalExpenses).toBe(1211091);
+      expect(summary.fixedCostsTotal).toBe(1211091);
+      expect(summary.variableCostsTotal).toBe(0);
+      expect(summary.count).toBe(10);
     });
 
     it("should record a new operational expense and update summary", async () => {
       const newExp = await createExpense({
-        expense_date: "2026-08-15",
+        expense_date: "2026-11-21",
         category_id: "exp-cat-01", // Ads
         description: "Shopee Search Ads & Iklan Produk Serupa",
         amount: 200000,
@@ -226,8 +226,8 @@ describe("Sprint 5 — Sales, Expenses, and Inventory Management Tests", () => {
       expect(newExp.amount).toBe(200000);
 
       const summary = await getExpensesSummary();
-      expect(summary.totalExpenses).toBe(1075000); // 875k + 200k
-      expect(summary.count).toBe(6);
+      expect(summary.totalExpenses).toBe(1411091); // 1.211.091 + 200k
+      expect(summary.count).toBe(11);
     });
 
     it("should reject expense with non-positive amount", async () => {

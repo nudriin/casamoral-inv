@@ -12,9 +12,9 @@ import { resetMemoryExpenses } from "../src/lib/services/expenses-service";
 
 describe("Sprint 6 — Reporting & Analytics Engine", () => {
   beforeEach(() => {
-    resetMemoryOrders();
-    resetMemoryPayments();
-    resetMemoryExpenses();
+    resetMemoryOrders(true);
+    resetMemoryPayments(true);
+    resetMemoryExpenses(false);
   });
 
   describe("1. Laporan Laba Rugi (Profit & Loss Statement)", () => {
@@ -33,25 +33,22 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
       expect(pl.grossProfit).toBeCloseTo(pl.netRevenue - pl.cogs, 2);
       expect(pl.grossMarginPct).toBeGreaterThan(0);
 
-      // Beban operasional baseline = Rp 875.000 (Tetap 820k, Variabel 55k)
-      expect(pl.operatingExpenses.fixedTotal).toBe(820000);
-      expect(pl.operatingExpenses.variableTotal).toBe(55000);
-      expect(pl.operatingExpenses.total).toBe(875000);
+      // Beban operasional baseline dari CSV = Rp 1.211.091
+      expect(pl.operatingExpenses.fixedTotal).toBe(1211091);
+      expect(pl.operatingExpenses.variableTotal).toBe(0);
+      expect(pl.operatingExpenses.total).toBe(1211091);
 
       // Laba operasional = Gross Profit - Total Expenses
-      expect(pl.operatingProfit).toBe(pl.grossProfit - 875000);
+      expect(pl.operatingProfit).toBe(pl.grossProfit - 1211091);
       expect(pl.netProfit).toBe(pl.operatingProfit);
     });
 
     it("should properly categorize fixed vs variable expenses in breakdown", async () => {
       const pl = await getProfitLossStatement();
-      expect(pl.operatingExpenses.breakdown.length).toBeGreaterThanOrEqual(4);
+      expect(pl.operatingExpenses.breakdown.length).toBe(10);
 
       const fixedItems = pl.operatingExpenses.breakdown.filter((b) => b.isFixed);
-      const varItems = pl.operatingExpenses.breakdown.filter((b) => !b.isFixed);
-
-      expect(fixedItems.length).toBeGreaterThan(0);
-      expect(varItems.length).toBeGreaterThan(0);
+      expect(fixedItems.length).toBe(10);
     });
   });
 
@@ -67,8 +64,8 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
       expect(cf.operatingOutflows.operatingExpensesPaid).toBeGreaterThan(0);
       expect(cf.operatingOutflows.materialPurchases).toBeGreaterThan(0);
 
-      // Setoran modal awal = Rp 11.440.748
-      expect(cf.financingCashFlow.ownerCapitalInjected).toBe(11440748);
+      // Setoran modal & belanja bahan/aset dari CSV = Rp 14.811.820
+      expect(cf.financingCashFlow.ownerCapitalInjected).toBe(14811820);
 
       // Saldo kas akhir harus terhitung rasional
       expect(cf.endingCashBalance).toBeDefined();
@@ -129,13 +126,13 @@ describe("Sprint 6 — Reporting & Analytics Engine", () => {
       expect(dash.kpis.totalRevenue).toBe(945000);
       expect(dash.kpis.totalCashReceived).toBe(290000);
       expect(dash.kpis.totalReceivables).toBe(655000);
-      expect(dash.kpis.totalExpenses).toBe(875000);
+      expect(dash.kpis.totalExpenses).toBe(1211091);
 
       // Piutang belum lunas ada 7 pesanan
       expect(dash.criticalReceivablesCount).toBe(7);
 
       // BEP Target
-      expect(dash.bepTracking.monthlyFixedOverhead).toBe(820000);
+      expect(dash.bepTracking.monthlyFixedOverhead).toBe(1211091);
       expect(dash.bepTracking.bepTargetUnits).toBeGreaterThan(0);
       expect(dash.bepTracking.unitContributionMargin).toBeGreaterThan(0);
       expect(dash.bepTracking.progressPercentage).toBeGreaterThanOrEqual(0);

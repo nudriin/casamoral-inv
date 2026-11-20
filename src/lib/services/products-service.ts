@@ -1,11 +1,11 @@
-import { INITIAL_PRODUCTS, ProductWithBOM, BomPartItem, BomHardwareItem } from "@/lib/data/initial-data";
+import { INITIAL_PRODUCTS, STORE_PRODUCTS, ALL_PRODUCTS, ProductWithBOM, BomPartItem, BomHardwareItem } from "@/lib/data/initial-data";
 import { Product, ProductCategory, ProductType, PricingSource, CalculationMode } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getEnvStatus } from "@/lib/env";
 import Decimal from "decimal.js";
 
 // In-memory products store for fallback, testing, and offline modes
-let memoryProducts: ProductWithBOM[] = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+let memoryProducts: ProductWithBOM[] = JSON.parse(JSON.stringify(ALL_PRODUCTS));
 
 const memoryCategories: ProductCategory[] = [
   { id: "cat-ambient", name: "Lampu Ambient", created_at: "2026-08-01T00:00:00Z" },
@@ -530,4 +530,15 @@ export async function deleteOrArchiveProduct(id: string): Promise<{ action: "DEL
  */
 export async function toggleProductActive(id: string, isActive: boolean): Promise<ProductWithBOM> {
   return updateProduct(id, { is_active: isActive });
+}
+
+/**
+ * Reset memory products (used for automated test cleanup)
+ */
+export function resetMemoryProducts(initialOnly = false): void {
+  if (initialOnly) {
+    memoryProducts = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+  } else {
+    memoryProducts = JSON.parse(JSON.stringify(ALL_PRODUCTS));
+  }
 }

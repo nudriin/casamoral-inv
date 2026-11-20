@@ -156,7 +156,7 @@ export function RecapClient({ initialRecap }: RecapClientProps) {
       "Produk",
       "Kemasan",
       "Total Tagihan Invoice (Rp)",
-      "Potongan Fee Shopee (Rp)",
+      "Potongan Fee Marketplace (Rp)",
       "Omzet Riil Diterima Kas (Rp)",
       "Modal Bahan Produk (Rp)",
       "Modal Kemasan (Rp)",
@@ -345,6 +345,8 @@ export function RecapClient({ initialRecap }: RecapClientProps) {
                 <option value="ALL">Semua Kanal</option>
                 <option value="Direct">Direct</option>
                 <option value="Shopee">Shopee</option>
+                <option value="TikTokShop">TikTok Shop</option>
+                <option value="Tokopedia">Tokopedia</option>
                 <option value="WhatsApp">WhatsApp</option>
                 <option value="Instagram">Instagram</option>
               </select>
@@ -413,7 +415,7 @@ export function RecapClient({ initialRecap }: RecapClientProps) {
                 <TableHead className="text-right text-amber-700 dark:text-amber-400">
                   Total Modal
                 </TableHead>
-                <TableHead className="text-right text-orange-600">Shopee Fee</TableHead>
+                <TableHead className="text-right text-orange-600">Fee Marketplace</TableHead>
                 <TableHead className="text-right font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
                   Laba Bersih
                 </TableHead>
@@ -441,10 +443,10 @@ export function RecapClient({ initialRecap }: RecapClientProps) {
                     <TableCell className="text-zinc-500">{o.orderDate.slice(0, 10)}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={o.channel === "Shopee" ? "accent" : "outline"}
+                        variant={["Shopee", "TikTokShop", "Tokopedia"].includes(o.channel) ? "accent" : "outline"}
                         className="text-[10px] py-0"
                       >
-                        {o.channel}
+                        {o.channel === "TikTokShop" ? "TikTok Shop" : o.channel}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-semibold text-zinc-800 dark:text-zinc-200">

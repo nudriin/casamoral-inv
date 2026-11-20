@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Order, OrderStatus, PaymentStatus, Product } from "@/types/database";
 import { ProductWithBOM } from "@/lib/data/initial-data";
-import { formatRupiah, formatDateIndo } from "@/lib/utils";
+import { formatRupiah, formatDateIndo, formatModelName } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -326,9 +326,9 @@ export function OrderDetailClient({ initialOrder, products }: OrderDetailClientP
                   <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                     {order.items?.map((item) => (
                       <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
-                        <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                          <div>{item.product?.name || "Lampu Ambient"}</div>
-                          <div className="text-[11px] text-zinc-400 font-mono">
+                        <td className="py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-100">
+                          <div>{formatModelName(item)}</div>
+                          <div className="text-[11px] text-zinc-400 font-mono font-normal">
                             {item.product?.sku}
                           </div>
                         </td>
