@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ViewModeToggle, ViewMode } from "@/components/ui/view-mode-toggle";
 import { recordInstallmentPaymentAction, createPayableAction } from "./actions";
 import {
   HandCoins,
@@ -29,6 +30,7 @@ interface PayablesClientProps {
 export function PayablesClient({ initialPayables, summary }: PayablesClientProps) {
   const [payables, setPayables] = useState<Payable[]>(initialPayables);
   const [activeTab, setActiveTab] = useState<"ALL" | "UNPAID" | "PAID">("ALL");
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
   // Payment Recording Modal
   const [selectedInstallment, setSelectedInstallment] = useState<{
@@ -273,14 +275,17 @@ export function PayablesClient({ initialPayables, summary }: PayablesClientProps
           ))}
         </div>
 
-        <Button
-          size="sm"
-          variant="accent"
-          onClick={() => setShowAddPayableModal(true)}
-          className="gap-1.5 text-xs font-semibold cursor-pointer"
-        >
-          <Plus className="h-4 w-4" /> Tambah Kewajiban Baru
-        </Button>
+        <div className="flex items-center gap-2">
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+          <Button
+            size="sm"
+            variant="accent"
+            onClick={() => setShowAddPayableModal(true)}
+            className="gap-1.5 text-xs font-semibold cursor-pointer"
+          >
+            <Plus className="h-4 w-4" /> Tambah Kewajiban Baru
+          </Button>
+        </div>
       </div>
 
       {/* Payables List & Installment Schedules */}
@@ -356,6 +361,59 @@ export function PayablesClient({ initialPayables, summary }: PayablesClientProps
               </CardHeader>
 
               <CardContent className="p-0">
+                {viewMode === "card" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                    {payable.installments?.map((inst) => {
+                      const isPaid = inst.status === "PAID";
+                      const isOverdue = inst.status === "OVERDUE";
+                      return (
+                        <div
+                          key={inst.id}
+                          className="rounded-2xl border border-zinc-200/60 bg-zinc-50/40 dark:border-zinc-800/70 dark:bg-zinc-900/50 p-4 flex flex-col justify-between gap-3"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                                Angsuran Ke-{inst.installment_number}
+                              </span>
+                              {isPaid ? (
+                                <Badge variant="secondary" className="text-[10px]">LUNAS</Badge>
+                              ) : isOverdue ? (
+                                <Badge variant="destructive" className="text-[10px]">TERLAMBAT</Badge>
+                              ) : (
+                                <Badge variant="warning" className="text-[10px]">BELUM JATUH TEMPO</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-zinc-500 flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+                              <span>{formatDateIndo(inst.due_date)}</span>
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800 text-xs">
+                              <span className="text-zinc-400">Tagihan</span>
+                              <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                                {formatRupiah(inst.amount)}
+                              </span>
+                            </div>
+                          </div>
+                          {!isPaid ? (
+                            <Button
+                              size="sm"
+                              variant="accent"
+                              onClick={() => openPaymentModal(payable.title, inst)}
+                              className="w-full text-xs h-8 gap-1 font-semibold"
+                            >
+                              <CreditCard className="h-3 w-3" /> Catat Bayar
+                            </Button>
+                          ) : (
+                            <div className="text-[11px] font-medium text-zinc-500 flex items-center justify-center gap-1 pt-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-orange-500" /> Selesai
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
@@ -453,6 +511,7 @@ export function PayablesClient({ initialPayables, summary }: PayablesClientProps
                     </tbody>
                   </table>
                 </div>
+                )}
               </CardContent>
             </Card>
           );

@@ -20,7 +20,7 @@ export function DashboardShell({ children, title, subtitle }: DashboardShellProp
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans antialiased text-zinc-900 dark:text-zinc-100">
+    <div className="flex min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-zinc-950 font-sans antialiased text-zinc-900 dark:text-zinc-100">
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -31,7 +31,7 @@ export function DashboardShell({ children, title, subtitle }: DashboardShellProp
           title={title}
           subtitle={subtitle}
         />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>

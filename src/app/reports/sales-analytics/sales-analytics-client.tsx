@@ -96,7 +96,7 @@ export function SalesAnalyticsClient({ analytics }: SalesAnalyticsClientProps) {
 
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-amber-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span>Total Volume Terjual</span>
@@ -113,7 +113,7 @@ export function SalesAnalyticsClient({ analytics }: SalesAnalyticsClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span>Rata-rata Nilai Pesanan (AOV)</span>
@@ -130,7 +130,7 @@ export function SalesAnalyticsClient({ analytics }: SalesAnalyticsClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span>Estimasi Beban Cetak Studio</span>
@@ -147,7 +147,7 @@ export function SalesAnalyticsClient({ analytics }: SalesAnalyticsClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span>Kustomisasi Add-On</span>

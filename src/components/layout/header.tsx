@@ -121,51 +121,51 @@ export function Header({ onMenuClick, title: propTitle, subtitle: propSubtitle }
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/90 sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-2 border-b border-zinc-200/80 bg-white/90 px-3 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/90 sm:px-6">
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
         {/* Mobile Hamburger Menu Toggle */}
         <button
           type="button"
           onClick={onMenuClick}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900 lg:hidden cursor-pointer"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200/80 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900 lg:hidden cursor-pointer"
           aria-label="Toggle navigation menu"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4" />
         </button>
 
         {/* Page Title & Breadcrumb */}
-        <div>
-          <h1 className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-base md:text-lg">
+        <div className="min-w-0">
+          <h1 className="truncate text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-base md:text-lg">
             {currentTitle}
           </h1>
-          <p className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:block">
+          <p className="hidden truncate text-xs text-zinc-500 dark:text-zinc-400 sm:block">
             {currentSubtitle}
           </p>
         </div>
       </div>
 
       {/* Header Right Actions */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Database Status Indicator */}
-        <div className="hidden items-center gap-1.5 rounded-md border border-zinc-200/80 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 md:flex">
+        {/* <div className="hidden items-center gap-1.5 rounded-md border border-zinc-200/80 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 md:flex">
           <Database className="h-3.5 w-3.5 text-amber-500" />
           <span>PostgreSQL (Supabase)</span>
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-1" />
-        </div>
+        </div> */}
 
         {/* Theme Toggle Button & Dropdown */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200/80 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 transition-colors cursor-pointer"
             aria-label="Ganti Tema (Light / Dark Mode)"
             title={`Tema aktif: ${theme === "system" ? "Sistem (" + resolvedTheme + ")" : theme}`}
           >
             {resolvedTheme === "dark" ? (
-              <Moon className="h-4 w-4 text-amber-400" />
+              <Moon className="h-4 w-4 text-orange-400" />
             ) : (
-              <Sun className="h-4 w-4 text-amber-500" />
+              <Sun className="h-4 w-4 text-orange-500" />
             )}
           </button>
 
@@ -183,9 +183,8 @@ export function Header({ onMenuClick, title: propTitle, subtitle: propSubtitle }
                     setTheme("light");
                     setThemeDropdownOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer ${
-                    theme === "light" ? "font-semibold text-amber-600 dark:text-amber-400 bg-zinc-50 dark:bg-zinc-800/60" : "text-zinc-700 dark:text-zinc-300"
-                  }`}
+                  className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer ${theme === "light" ? "font-semibold text-amber-600 dark:text-amber-400 bg-zinc-50 dark:bg-zinc-800/60" : "text-zinc-700 dark:text-zinc-300"
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Sun className="h-3.5 w-3.5 text-amber-500" />
@@ -199,9 +198,8 @@ export function Header({ onMenuClick, title: propTitle, subtitle: propSubtitle }
                     setTheme("dark");
                     setThemeDropdownOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer ${
-                    theme === "dark" ? "font-semibold text-amber-600 dark:text-amber-400 bg-zinc-50 dark:bg-zinc-800/60" : "text-zinc-700 dark:text-zinc-300"
-                  }`}
+                  className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer ${theme === "dark" ? "font-semibold text-amber-600 dark:text-amber-400 bg-zinc-50 dark:bg-zinc-800/60" : "text-zinc-700 dark:text-zinc-300"
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Moon className="h-3.5 w-3.5 text-amber-400" />
@@ -215,9 +213,8 @@ export function Header({ onMenuClick, title: propTitle, subtitle: propSubtitle }
                     setTheme("system");
                     setThemeDropdownOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer ${
-                    theme === "system" ? "font-semibold text-amber-600 dark:text-amber-400 bg-zinc-50 dark:bg-zinc-800/60" : "text-zinc-700 dark:text-zinc-300"
-                  }`}
+                  className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer ${theme === "system" ? "font-semibold text-amber-600 dark:text-amber-400 bg-zinc-50 dark:bg-zinc-800/60" : "text-zinc-700 dark:text-zinc-300"
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Laptop className="h-3.5 w-3.5 text-zinc-500" />
@@ -237,15 +234,15 @@ export function Header({ onMenuClick, title: propTitle, subtitle: propSubtitle }
           size="sm"
           onClick={() => void handleLock()}
           title="Kunci Aplikasi (Logout)"
-          className="gap-1.5 text-xs text-zinc-600 dark:text-zinc-300 cursor-pointer"
+          className="h-9 w-9 p-0 md:h-8 md:w-auto md:px-3.5 gap-1.5 text-xs text-zinc-600 dark:text-zinc-300 cursor-pointer shrink-0"
         >
           <Lock className="h-3.5 w-3.5" />
           <span className="hidden md:inline">Kunci</span>
         </Button>
 
         {/* Quick Action: New Order */}
-        <Link href="/orders/new">
-          <Button size="sm" variant="accent" className="gap-1.5 text-xs font-semibold cursor-pointer">
+        <Link href="/orders/new" className="shrink-0">
+          <Button size="sm" variant="accent" className="h-9 px-3 sm:h-8 sm:px-3.5 gap-1 text-xs font-semibold cursor-pointer">
             <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Pesanan Baru</span>
             <span className="sm:hidden">Pesanan</span>

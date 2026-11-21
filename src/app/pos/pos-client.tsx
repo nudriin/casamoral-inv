@@ -475,9 +475,9 @@ export function PosClient({ products, packagingMaterials, allMaterials = [] }: P
               <button
                 type="button"
                 onClick={() => setChannel("Direct")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                   channel === "Direct"
-                    ? "bg-emerald-600 text-white shadow-sm"
+                    ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-900"
                     : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
                 }`}
               >
@@ -486,9 +486,9 @@ export function PosClient({ products, packagingMaterials, allMaterials = [] }: P
               <button
                 type="button"
                 onClick={() => setChannel("Shopee")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                   channel === "Shopee"
-                    ? "bg-orange-600 text-white shadow-sm"
+                    ? "bg-orange-500 text-white shadow-xs"
                     : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
                 }`}
               >
@@ -497,9 +497,9 @@ export function PosClient({ products, packagingMaterials, allMaterials = [] }: P
               <button
                 type="button"
                 onClick={() => setChannel("TikTokShop")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                   channel === "TikTokShop"
-                    ? "bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-950"
+                    ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-950"
                     : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
                 }`}
               >
@@ -508,9 +508,9 @@ export function PosClient({ products, packagingMaterials, allMaterials = [] }: P
               <button
                 type="button"
                 onClick={() => setChannel("Tokopedia")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                   channel === "Tokopedia"
-                    ? "bg-emerald-700 text-white shadow-sm"
+                    ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-900"
                     : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200"
                 }`}
               >

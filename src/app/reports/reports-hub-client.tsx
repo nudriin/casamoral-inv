@@ -147,24 +147,24 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
   return (
     <div className="space-y-6">
       {/* Top Tab Navigation & Glossary */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-zinc-100/90 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-zinc-800/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/70">
+        <div className="flex items-center gap-1.5 p-1 rounded-full bg-white dark:bg-zinc-800/80 shadow-xs">
           <button
             onClick={() => setActiveTab("RECAP")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === "RECAP"
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-900"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
             }`}
           >
             <FileSpreadsheet className="h-4 w-4" /> 1. Buku Kas & Rekap Omzet
           </button>
           <button
             onClick={() => setActiveTab("STATEMENTS")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === "STATEMENTS"
-                ? "bg-amber-600 text-white shadow-sm"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                ? "bg-orange-500 text-white shadow-xs"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
             }`}
           >
             <TrendingUp className="h-4 w-4" /> 2. Laporan Finansial SAK & Ekspor
@@ -190,7 +190,7 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
                 <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
                   Pusat Pelaporan Finansial & Standar Akuntansi Studio
                 </h2>
-                <Badge className="bg-emerald-600 text-white font-bold text-[10px]">SAK EMKM</Badge>
+                <Badge variant="accent" className="text-[10px]">SAK EMKM</Badge>
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">
                 Laporan komprehensif berbasis transaksi studio, alokasi beban penyusutan printer, dan arus kas riil.
@@ -201,11 +201,11 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
           {/* 3 Main Report Navigation Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Report 1: Laba Rugi */}
-        <Card className="hover:border-amber-400 dark:hover:border-amber-600 transition-all shadow-sm">
+        <Card className="hover:border-orange-500/40 transition-all">
           <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
             <div className="flex items-center justify-between">
               <Badge variant="accent">Finansial Akrual</Badge>
-              <TrendingUp className="w-4 h-4 text-amber-500" />
+              <TrendingUp className="w-4 h-4 text-orange-500" />
             </div>
             <CardTitle className="text-base font-semibold pt-1 flex items-center justify-between">
               <span>Laporan Laba Rugi</span>
@@ -218,7 +218,7 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
           <CardContent className="p-4 space-y-3">
             <div className="flex justify-between text-xs">
               <span className="text-zinc-500">Laba Kotor:</span>
-              <span className="font-mono font-semibold text-emerald-600">
+              <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">
                 {formatRupiah(pl.grossProfit)} ({pl.grossMarginPct}%)
               </span>
             </div>
@@ -230,7 +230,7 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
             </div>
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
               <Link href="/reports/profit-loss" className="block">
-                <Button size="sm" className="w-full text-xs gap-1 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-semibold">
+                <Button size="sm" variant="accent" className="w-full text-xs gap-1 font-semibold">
                   Buka Laporan Laba Rugi <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
@@ -239,11 +239,11 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
         </Card>
 
         {/* Report 2: Arus Kas */}
-        <Card className="hover:border-emerald-400 dark:hover:border-emerald-600 transition-all shadow-sm">
+        <Card className="hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
             <div className="flex items-center justify-between">
-              <Badge variant="success">Metode Langsung</Badge>
-              <Wallet className="w-4 h-4 text-emerald-500" />
+              <Badge variant="secondary">Metode Langsung</Badge>
+              <Wallet className="w-4 h-4 text-zinc-500" />
             </div>
             <CardTitle className="text-base font-semibold pt-1 flex items-center justify-between">
               <span>Laporan Arus Kas</span>
@@ -256,7 +256,7 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
           <CardContent className="p-4 space-y-3">
             <div className="flex justify-between text-xs">
               <span className="text-zinc-500">Penerimaan Kas Pelanggan:</span>
-              <span className="font-mono font-semibold text-emerald-600">
+              <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">
                 +{formatRupiah(cashFlow.operatingInflows.customerPayments)}
               </span>
             </div>
@@ -268,7 +268,7 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
             </div>
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
               <Link href="/reports/cash-flow" className="block">
-                <Button size="sm" variant="outline" className="w-full text-xs gap-1 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
+                <Button size="sm" variant="outline" className="w-full text-xs gap-1">
                   Buka Laporan Arus Kas <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
@@ -277,14 +277,14 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
         </Card>
 
         {/* Report 3: Analisis Penjualan & Produk */}
-        <Card className="hover:border-blue-400 dark:hover:border-blue-600 transition-all shadow-sm">
+        <Card className="hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
             <div className="flex items-center justify-between">
-              <Badge variant="outline">SKU & Performance</Badge>
-              <Package className="w-4 h-4 text-blue-500" />
+              <Badge variant="outline">SKU &amp; Performance</Badge>
+              <Package className="w-4 h-4 text-zinc-500" />
             </div>
             <CardTitle className="text-base font-semibold pt-1">
-              Analitik Produk & Penjualan
+              Analitik Produk &amp; Penjualan
             </CardTitle>
             <div className="text-xs text-zinc-500">
               Matriks margin kontribusi 4 model lampu, add-on kustom, dan estimasi beban mesin cetak.
@@ -299,13 +299,13 @@ export function ReportsHubClient({ pl, cashFlow, sales, orders, recap }: Reports
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-zinc-500">Total Jam Cetak:</span>
-              <span className="font-mono text-purple-600 dark:text-purple-400">
+              <span className="font-mono text-zinc-700 dark:text-zinc-300">
                 {sales.totalPrintingHoursEstimated.toFixed(1)} jam operasional
               </span>
             </div>
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
               <Link href="/reports/sales-analytics" className="block">
-                <Button size="sm" variant="outline" className="w-full text-xs gap-1 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20">
+                <Button size="sm" variant="outline" className="w-full text-xs gap-1">
                   Buka Analisis Produk <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>

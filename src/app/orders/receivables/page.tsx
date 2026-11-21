@@ -57,66 +57,66 @@ export default async function ReceivablesPage() {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Piutang */}
-        <Card className="border-l-4 border-l-rose-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Total Saldo Piutang</span>
-              <span className="p-1.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Total Saldo Piutang</span>
+              <span className="p-2 rounded-full bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">
                 <CreditCard className="w-4 h-4" />
               </span>
             </div>
-            <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-2">
+            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-2">
               {formatRupiah(summary.totalReceivables)}
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center justify-between">
               <span>{summary.totalReceivableOrdersCount} Pesanan terdaftar</span>
-              <span className="text-rose-600 font-medium">Belum Lunas</span>
+              <span className="text-orange-600 dark:text-orange-400 font-medium">Belum Lunas</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Card 2: Jumlah Pesanan Belum Lunas */}
-        <Card className="border-l-4 border-l-amber-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Pesanan Belum Lunas</span>
-              <span className="p-1.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Pesanan Belum Lunas</span>
+              <span className="p-2 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 <AlertTriangle className="w-4 h-4" />
               </span>
             </div>
-            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-100 mt-2">
+            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-2">
               {summary.totalReceivableOrdersCount} Transaksi
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
               Termasuk 2 sampel promo (Rp 0)
             </div>
           </CardContent>
         </Card>
 
         {/* Card 3: Rata-rata Piutang */}
-        <Card className="border-l-4 border-l-indigo-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Rata-rata Saldo / Order</span>
-              <span className="p-1.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Rata-rata Saldo / Order</span>
+              <span className="p-2 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 <Coins className="w-4 h-4" />
               </span>
             </div>
-            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-100 mt-2">
+            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-2">
               {formatRupiah(avgReceivable)}
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
               Rata-rata nilai piutang terbuka
             </div>
           </CardContent>
         </Card>
 
         {/* Card 4: Distribusi Kanal */}
-        <Card className="border-l-4 border-l-orange-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Piutang Berdasarkan Kanal</span>
-              <span className="p-1.5 rounded-md bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Piutang Berdasarkan Kanal</span>
+              <span className="p-2 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 <Layers className="w-4 h-4" />
               </span>
             </div>
@@ -125,7 +125,7 @@ export default async function ReceivablesPage() {
                 Direct: {formatRupiah(summary.byChannel["Direct"] || 0)}
               </span>
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1 font-mono text-orange-600">
+            <div className="text-[11px] text-orange-600 dark:text-orange-400 mt-1 font-mono">
               Shopee: {formatRupiah(summary.byChannel["Shopee"] || 0)}
             </div>
           </CardContent>

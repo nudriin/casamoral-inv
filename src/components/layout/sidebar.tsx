@@ -12,7 +12,6 @@ import {
   Coins,
   Receipt,
   FileSpreadsheet,
-  Printer,
   Calculator,
   HandCoins,
   Settings,
@@ -143,9 +142,11 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       >
         {/* Brand Header */}
         <div className="flex h-16 items-center gap-3 border-b border-zinc-200/80 px-5 dark:border-zinc-800/80">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 text-white shadow-xs">
-            <Printer className="h-5 w-5" />
-          </div>
+          <img
+            src="/icon-192x192.png"
+            alt="Casa Moral Logo"
+            className="h-9 w-9 rounded-lg object-cover shadow-xs shrink-0"
+          />
           <div className="flex flex-col">
             <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               CASA MORAL
@@ -186,9 +187,9 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                       href={item.href}
                       onClick={onClose}
                       className={cn(
-                        "group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "group flex items-center justify-between rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
                         isActive
-                          ? "bg-amber-500/10 text-amber-700 font-semibold dark:bg-amber-500/15 dark:text-amber-300"
+                          ? "bg-orange-500/10 text-orange-600 font-semibold dark:bg-orange-500/15 dark:text-orange-400"
                           : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
                       )}
                     >
@@ -197,7 +198,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                           className={cn(
                             "h-4 w-4 transition-colors",
                             isActive
-                              ? "text-amber-600 dark:text-amber-400"
+                              ? "text-orange-600 dark:text-orange-400"
                               : "text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300"
                           )}
                         />
@@ -208,7 +209,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                           className={cn(
                             "rounded-full px-2 py-0.5 text-[10px] font-medium",
                             isActive
-                              ? "bg-amber-200/60 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                              ? "bg-orange-500/15 text-orange-700 dark:bg-orange-950 dark:text-orange-300"
                               : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
                           )}
                         >

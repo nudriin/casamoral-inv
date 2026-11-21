@@ -88,7 +88,7 @@ export function CashFlowClient({ statement }: CashFlowClientProps) {
 
       {/* Top 3 Flow Indicator Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -108,7 +108,7 @@ export function CashFlowClient({ statement }: CashFlowClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-rose-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -128,7 +128,7 @@ export function CashFlowClient({ statement }: CashFlowClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span className="flex items-center gap-1.5">

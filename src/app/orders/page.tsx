@@ -56,39 +56,39 @@ export default async function OrdersPage() {
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Volume */}
-        <Card className="border-l-4 border-l-amber-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Total Volume Pesanan</span>
-              <span className="p-1.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Total Volume Pesanan</span>
+              <span className="p-2 rounded-full bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">
                 <ShoppingCart className="w-4 h-4" />
               </span>
             </div>
-            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-100 mt-2">
+            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-2">
               {formatRupiah(stats.totalRevenue)}
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center justify-between">
               <span>{stats.totalOrders} Transaksi tercatat</span>
-              <span className="text-amber-600 font-medium">9 Unit Model</span>
+              <span className="text-orange-600 dark:text-orange-400 font-medium">9 Unit Model</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Card 2: Realisasi Kas */}
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Kas Masuk (Lunas)</span>
-              <span className="p-1.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Kas Masuk (Lunas)</span>
+              <span className="p-2 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 <Coins className="w-4 h-4" />
               </span>
             </div>
-            <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-2">
+            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-2">
               {formatRupiah(stats.totalPaid)}
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center justify-between">
               <span>2 Pesanan terverifikasi</span>
-              <span className="text-emerald-600 font-semibold">
+              <span className="text-orange-600 dark:text-orange-400 font-semibold">
                 {((stats.totalPaid / (stats.totalRevenue || 1)) * 100).toFixed(1)}% Realisasi
               </span>
             </div>
@@ -96,35 +96,35 @@ export default async function OrdersPage() {
         </Card>
 
         {/* Card 3: Piutang Berjalan */}
-        <Card className="border-l-4 border-l-rose-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Piutang Berjalan (Belum Lunas)</span>
-              <span className="p-1.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Piutang Berjalan (Belum Lunas)</span>
+              <span className="p-2 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 <CreditCard className="w-4 h-4" />
               </span>
             </div>
-            <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-2">
+            <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-50 mt-2">
               {formatRupiah(stats.totalReceivables)}
             </div>
-            <div className="text-[11px] text-zinc-500 mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center justify-between">
               <span>7 Pesanan belum lunas</span>
-              <span className="text-rose-600 font-medium">Konsinyasi / Teman</span>
+              <span className="text-zinc-600 dark:text-zinc-300 font-medium">Konsinyasi / Teman</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Card 4: Omnichannel Breakdown */}
-        <Card className="border-l-4 border-l-indigo-500">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">Kanal Penjualan</span>
-              <span className="p-1.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Kanal Penjualan</span>
+              <span className="p-2 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 <Layers className="w-4 h-4" />
               </span>
             </div>
             <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+              <span className="font-mono text-zinc-900 dark:text-zinc-100 font-bold">
                 {stats.channelCounts["Direct"] || 0} Direct
               </span>
               <span className="text-zinc-300 dark:text-zinc-700">•</span>

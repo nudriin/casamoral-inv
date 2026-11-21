@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ViewModeToggle, ViewMode } from "@/components/ui/view-mode-toggle";
 import {
   createMaterialAction,
   updateMaterialAction,
@@ -48,6 +49,7 @@ export function InventoryClient({
   // Search & Filter
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
   // Modals
   const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
@@ -302,7 +304,7 @@ export function InventoryClient({
               : "bg-rose-500/10 text-rose-800 dark:text-rose-300 border-rose-500/20"
           }`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {feedback.type === "success" ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : (
@@ -339,7 +341,7 @@ export function InventoryClient({
             <CardTitle className="text-xs font-medium text-zinc-500">Total Stok Filamen</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+            <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
               {summary.filamentStockKg.toFixed(1)} kg
             </div>
             <p className="text-xs text-zinc-500 mt-1">
@@ -353,7 +355,7 @@ export function InventoryClient({
             <CardTitle className="text-xs font-medium text-zinc-500">Status Persediaan</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant={summary.lowStockCount === 0 ? "success" : "warning"} className="text-sm px-2.5 py-0.5">
                 {summary.lowStockCount === 0 ? "Seluruh Stok Aman" : `${summary.lowStockCount} Menipis`}
               </Badge>
@@ -372,14 +374,14 @@ export function InventoryClient({
               Basis data acuan untuk kalkulasi HPP dan pemotongan stok otomatis saat pesanan diproduksi
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
               variant="outline"
               onClick={() => openAdjustModal()}
-              className="gap-1.5 text-xs cursor-pointer border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"
+              className="gap-1.5 text-xs cursor-pointer"
             >
-              <Scale className="h-3.5 w-3.5 text-amber-600" /> Penyesuaian Stok (Opname)
+              <Scale className="h-3.5 w-3.5 text-orange-500" /> Penyesuaian Stok (Opname)
             </Button>
             <Button
               size="sm"
@@ -412,11 +414,11 @@ export function InventoryClient({
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-8 px-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 text-xs cursor-pointer"
+              className="h-8 px-3 rounded-full border border-zinc-200 bg-white text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 text-xs cursor-pointer"
             >
               <option value="ALL">Semua Kategori</option>
               <option value="filament">Filamen</option>
@@ -425,10 +427,89 @@ export function InventoryClient({
               <option value="hardware">Hardware</option>
               <option value="other">Lainnya</option>
             </select>
+            <ViewModeToggle mode={viewMode} onChange={setViewMode} />
           </div>
         </div>
 
         <CardContent className="p-0">
+          {viewMode === "card" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 pt-1">
+              {filteredMaterials.map((item) => {
+                const isLow = item.current_stock <= item.min_stock_alert;
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-zinc-200/60 bg-zinc-50/40 dark:border-zinc-800/70 dark:bg-zinc-900/50 p-4 flex flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                            {item.name}
+                          </div>
+                          <div className="text-[11px] text-zinc-400">{item.supplier || "-"}</div>
+                        </div>
+                        <Badge variant={isLow ? "destructive" : "secondary"} className="text-[10px] shrink-0">
+                          {isLow ? "Menipis" : "Aman"}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-200/50 dark:border-zinc-800 text-xs">
+                        <div>
+                          <span className="text-[10px] text-zinc-400 block">Stok</span>
+                          <span className="font-mono font-bold text-zinc-900 dark:text-zinc-50">
+                            {formatNumber(item.current_stock)} {item.unit}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-zinc-400 block">Alert</span>
+                          <span className="font-mono text-zinc-500">
+                            {formatNumber(item.min_stock_alert)} {item.unit}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-zinc-400 block">Satuan</span>
+                          <span className="font-mono font-semibold text-orange-600 dark:text-orange-400">
+                            {formatRupiah(item.cost_per_unit)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800">
+                      <Badge variant="outline" className="capitalize text-[10px]">
+                        {item.category}
+                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openAdjustModal(item)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-orange-600 hover:bg-orange-500/10 cursor-pointer"
+                          title="Penyesuaian Stok (Stock Opname)"
+                        >
+                          <Scale className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(item)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 hover:text-orange-600 hover:bg-orange-500/10 cursor-pointer"
+                          title="Edit Bahan"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMaterial(item)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 hover:text-red-600 hover:bg-red-500/10 cursor-pointer"
+                          title="Hapus Bahan"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-y border-zinc-200 dark:border-zinc-800">
@@ -511,6 +592,7 @@ export function InventoryClient({
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -849,7 +931,7 @@ export function InventoryClient({
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs animate-in fade-in">
             <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-5 space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800/80 pb-3">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
                     <Scale className="h-4 w-4" />
                   </div>

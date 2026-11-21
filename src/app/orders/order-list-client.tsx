@@ -7,6 +7,7 @@ import { ProductWithBOM } from "@/lib/data/initial-data";
 import { formatRupiah, formatDateIndo, formatModelName } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ViewModeToggle, ViewMode } from "@/components/ui/view-mode-toggle";
 import { Input } from "@/components/ui/input";
 import {
   Search,
@@ -39,6 +40,7 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
   const [channelFilter, setChannelFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
@@ -77,37 +79,37 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
     switch (status) {
       case "PENDING":
         return (
-          <Badge variant="outline" className="gap-1 border-zinc-400 text-zinc-600 dark:text-zinc-300">
+          <Badge variant="outline" className="gap-1">
             <Clock className="w-3 h-3" /> Menunggu
           </Badge>
         );
       case "CONFIRMED":
         return (
-          <Badge variant="secondary" className="gap-1 bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800">
+          <Badge variant="secondary" className="gap-1">
             <CheckCircle2 className="w-3 h-3" /> Dikonfirmasi
           </Badge>
         );
       case "IN_PRODUCTION":
         return (
-          <Badge variant="accent" className="gap-1 bg-amber-500/10 text-amber-700 border-amber-300 dark:text-amber-400 animate-pulse">
+          <Badge variant="accent" className="gap-1">
             <Sparkles className="w-3 h-3" /> Diproduksi
           </Badge>
         );
       case "READY":
         return (
-          <Badge variant="secondary" className="gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800">
+          <Badge variant="secondary" className="gap-1">
             <PackageCheck className="w-3 h-3" /> Siap Kirim
           </Badge>
         );
       case "SHIPPED":
         return (
-          <Badge variant="secondary" className="gap-1 bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800">
+          <Badge variant="secondary" className="gap-1">
             <Truck className="w-3 h-3" /> Dikirim
           </Badge>
         );
       case "COMPLETED":
         return (
-          <Badge variant="success" className="gap-1">
+          <Badge variant="default" className="gap-1">
             <CheckCircle2 className="w-3 h-3" /> Selesai
           </Badge>
         );
@@ -126,13 +128,13 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
     switch (status) {
       case "PAID":
         return (
-          <Badge variant="success" className="gap-1 text-[11px]">
+          <Badge variant="secondary" className="gap-1 text-[11px]">
             Lunas
           </Badge>
         );
       case "PARTIALLY_PAID":
         return (
-          <Badge variant="secondary" className="gap-1 text-[11px] bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300">
+          <Badge variant="outline" className="gap-1 text-[11px]">
             DP: {formatRupiah(paid)}
           </Badge>
         );
@@ -150,39 +152,39 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
     switch (channel.toLowerCase().replace(/\s+/g, "")) {
       case "shopee":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">
             Shopee
           </span>
         );
       case "tiktokshop":
       case "tiktok":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-zinc-900 text-zinc-100 border border-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:border-zinc-300">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-950">
             TikTok Shop
           </span>
         );
       case "tokopedia":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
             Tokopedia
           </span>
         );
       case "whatsapp":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
             WhatsApp
           </span>
         );
       case "instagram":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200 dark:bg-fuchsia-950/40 dark:text-fuchsia-400 dark:border-fuchsia-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
             Instagram
           </span>
         );
       case "direct":
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
             Direct
           </span>
         );
@@ -207,8 +209,8 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Channel filter */}
-            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
-              <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1">
+            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-full overflow-x-auto max-w-full">
+              <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1 shrink-0">
                 <Filter className="w-3 h-3" /> Kanal:
               </span>
               {[
@@ -221,7 +223,7 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                 <button
                   key={ch.key}
                   onClick={() => setChannelFilter(ch.key)}
-                  className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                  className={`text-xs px-3 py-1 rounded-full font-medium transition-all shrink-0 ${
                     channelFilter.toLowerCase() === ch.key.toLowerCase()
                       ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
                       : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -233,7 +235,7 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
             </div>
 
             {/* Payment filter */}
-            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
+            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-full">
               <span className="text-xs font-medium text-zinc-500 px-2">Bayar:</span>
               {[
                 { label: "Semua", val: "ALL" },
@@ -243,7 +245,7 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                 <button
                   key={p.val}
                   onClick={() => setPaymentFilter(p.val)}
-                  className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                  className={`text-xs px-3 py-1 rounded-full font-medium transition-all ${
                     paymentFilter === p.val
                       ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
                       : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
@@ -253,6 +255,7 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                 </button>
               ))}
             </div>
+            <ViewModeToggle mode={viewMode} onChange={setViewMode} />
           </div>
         </div>
 
@@ -272,10 +275,10 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
             <button
               key={st.val}
               onClick={() => setStatusFilter(st.val)}
-              className={`px-2.5 py-1 rounded-full shrink-0 font-medium border transition-colors ${
+              className={`px-3 py-1 rounded-full shrink-0 font-medium border transition-colors ${
                 statusFilter === st.val
-                  ? "bg-amber-500/10 text-amber-600 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-700 font-semibold"
-                  : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300"
+                  ? "bg-orange-500/10 text-orange-600 border-orange-500/30 dark:bg-orange-500/15 dark:text-orange-400 dark:border-orange-500/30 font-semibold"
+                  : "bg-white border-zinc-200/80 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300"
               }`}
             >
               {st.label}
@@ -295,8 +298,105 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
             Coba ubah kata kunci pencarian atau reset filter kanal dan status untuk melihat data lainnya.
           </p>
         </div>
+      ) : viewMode === "card" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredOrders.map((order) => {
+            const firstItem = order.items?.[0];
+            const netValue =
+              order.platform_fee && order.platform_fee > 0
+                ? order.total_amount - order.platform_fee
+                : order.total_amount;
+            return (
+              <div
+                key={order.id}
+                className="rounded-2xl border border-zinc-200/60 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:border-zinc-800/70 dark:bg-zinc-900/70 flex flex-col justify-between gap-3"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="font-mono text-sm font-semibold text-zinc-900 hover:text-orange-600 dark:text-zinc-100 dark:hover:text-orange-400 hover:underline"
+                      >
+                        {order.order_number}
+                      </Link>
+                      <div className="text-[11px] text-zinc-400 mt-0.5">
+                        {formatDateIndo(order.order_date)}
+                      </div>
+                    </div>
+                    {getChannelBadge(order.channel)}
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {order.customer?.name || "Pelanggan Umum"}
+                    </div>
+                    <div className="text-xs text-zinc-500">{order.customer?.city || "-"}</div>
+                  </div>
+
+                  {firstItem && (
+                    <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-2.5 text-xs space-y-0.5">
+                      <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                        {formatModelName(firstItem)}
+                        {firstItem.quantity > 1 && ` (${firstItem.quantity} unit)`}
+                      </div>
+                      {firstItem.color_details && (
+                        <div className="text-[11px] text-zinc-500 italic">{firstItem.color_details}</div>
+                      )}
+                      {order.items && order.items.length > 1 && (
+                        <div className="text-[11px] text-zinc-400">+{order.items.length - 1} item lainnya</div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <div className="text-base font-bold font-mono text-zinc-900 dark:text-zinc-50">
+                        {formatRupiah(netValue)}
+                      </div>
+                      {order.platform_fee && order.platform_fee > 0 ? (
+                        <div className="text-[10px] text-zinc-400">
+                          Tagihan {formatRupiah(order.total_amount)} • Fee -{formatRupiah(order.platform_fee)}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {getPaymentBadge(order.payment_status, order.paid_amount)}
+                      {getStatusBadge(order.status)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2.5 border-t border-zinc-100 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setEditingOrder(order)}
+                    className="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-orange-500/10 hover:text-orange-600 cursor-pointer transition-colors"
+                  >
+                    <Pencil className="w-2.5 h-2.5" /> Edit
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <Link href={`/orders/${order.id}`}>
+                      <Button variant="ghost" size="sm" className="h-7 px-2.5 gap-0.5 text-[11px]">
+                        Detail <ChevronRight className="w-3 h-3" />
+                      </Button>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingOrder(order)}
+                      title="Hapus Transaksi"
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-full text-zinc-400 hover:text-red-600 hover:bg-red-500/10 cursor-pointer transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
-        <div className="rounded-xl border border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900 shadow-xs overflow-hidden">
+        <div className="rounded-2xl border border-zinc-200/60 bg-white dark:border-zinc-800/70 dark:bg-zinc-900/70 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-zinc-50 dark:bg-zinc-800/60 text-xs font-semibold text-zinc-600 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
@@ -323,12 +423,12 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Link
                             href={`/orders/${order.id}`}
-                            className="font-mono font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:underline"
+                            className="font-mono font-semibold text-zinc-900 hover:text-orange-600 dark:text-zinc-100 dark:hover:text-orange-400 hover:underline"
                           >
                             {order.order_number}
                           </Link>
                           {order.order_number.startsWith("POS-") && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400">
                               Kasir POS
                             </span>
                           )}
@@ -368,8 +468,8 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                               </div>
                             )}
                             {firstItem.add_on_name && (
-                              <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
-                                <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                                <Sparkles className="w-2.5 h-2.5 text-orange-500" />
                                 {firstItem.add_on_name} (+{formatRupiah(firstItem.add_on_price || 0)})
                               </div>
                             )}
@@ -387,14 +487,14 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                       <td className="py-3 px-4 align-top text-right font-mono font-semibold text-zinc-900 dark:text-zinc-100">
                         {order.platform_fee && order.platform_fee > 0 ? (
                           <div>
-                            <span className="text-emerald-700 dark:text-emerald-400 font-bold block">
+                            <span className="text-zinc-900 dark:text-zinc-50 font-bold block">
                               {formatRupiah(order.total_amount - order.platform_fee)}
                             </span>
                             <span className="text-[10px] text-zinc-400 font-normal block">
                               Tagihan: {formatRupiah(order.total_amount)}
                             </span>
-                            <span className="text-[9px] text-orange-600 font-medium block">
-                              (Fee: -{formatRupiah(order.platform_fee)})
+                            <span className="text-[10px] text-zinc-400 font-normal block">
+                              Fee: -{formatRupiah(order.platform_fee)}
                             </span>
                           </div>
                         ) : (
@@ -412,7 +512,7 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                       <td className="py-3 px-4 align-top text-center">
                         {getPaymentBadge(order.payment_status, order.paid_amount)}
                         {order.payment_status === "UNPAID" && order.total_amount > 0 && (
-                          <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 font-medium">
+                          <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 font-medium">
                             Piutang {formatRupiah(order.total_amount - order.paid_amount)}
                           </div>
                         )}
@@ -427,12 +527,12 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                           <button
                             type="button"
                             onClick={() => setEditingOrder(order)}
-                            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer transition-colors"
+                            className="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[11px] font-medium text-zinc-700 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-orange-500/10 hover:text-orange-600 dark:hover:bg-orange-500/15 dark:hover:text-orange-400 cursor-pointer transition-colors"
                           >
                             <Pencil className="w-2.5 h-2.5" /> Edit
                           </button>
                           <Link href={`/orders/${order.id}`}>
-                            <Button variant="ghost" size="sm" className="h-7 px-2 gap-0.5 text-[11px]">
+                            <Button variant="ghost" size="sm" className="h-7 px-2.5 gap-0.5 text-[11px]">
                               Detail <ChevronRight className="w-3 h-3" />
                             </Button>
                           </Link>
@@ -440,7 +540,7 @@ export function OrderListClient({ initialOrders, products }: OrderListClientProp
                             type="button"
                             onClick={() => setDeletingOrder(order)}
                             title="Hapus Transaksi"
-                            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
+                            className="inline-flex items-center justify-center h-7 w-7 rounded-full text-zinc-400 hover:text-red-600 hover:bg-red-500/10 cursor-pointer transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

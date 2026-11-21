@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ViewModeToggle, ViewMode } from "@/components/ui/view-mode-toggle";
 import { formatRupiah } from "@/lib/utils";
 import { Printer, Wrench, Plus, Search, Edit2, Trash2, X, CheckCircle, AlertCircle, ShoppingBag } from "lucide-react";
 import { Asset } from "@/types/database";
@@ -37,6 +38,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
 
   const [searchPurchase, setSearchPurchase] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
   // Modals state
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
@@ -439,9 +441,9 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors ${
+                  className={`text-[11px] px-3 py-1 rounded-full font-medium transition-colors ${
                     selectedCategory === cat
-                      ? "bg-amber-500 text-white"
+                      ? "bg-orange-500 text-white"
                       : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                   }`}
                 >
@@ -449,9 +451,67 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                 </button>
               ))}
             </div>
+            <ViewModeToggle mode={viewMode} onChange={setViewMode} />
           </div>
 
-          <div className="overflow-x-auto max-h-[460px] overflow-y-auto border border-zinc-200 dark:border-zinc-800 rounded-lg">
+          {viewMode === "card" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[520px] overflow-y-auto pr-1">
+              {filteredPurchases.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-zinc-200/60 bg-zinc-50/40 dark:border-zinc-800/70 dark:bg-zinc-900/50 p-4 flex flex-col justify-between gap-3"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-mono text-zinc-400">{item.purchaseDate || "-"}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {item.category}
+                      </Badge>
+                    </div>
+                    <div className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                      {item.name}
+                    </div>
+                    {(item.storeLocation || item.account) && (
+                      <div className="text-[11px] text-zinc-400 flex flex-wrap gap-2">
+                        {item.storeLocation && <span>Toko: {item.storeLocation}</span>}
+                        {item.account && <span>Akun: {item.account}</span>}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800 text-xs">
+                      <span className="text-zinc-500">
+                        {item.quantity}x @ {formatRupiah(item.unitPrice)}
+                      </span>
+                      <span className="font-mono font-bold text-zinc-900 dark:text-zinc-50">
+                        {formatRupiah(item.totalCost)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-1 pt-2 border-t border-zinc-200/50 dark:border-zinc-800">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2.5 text-[11px] text-zinc-600 hover:text-orange-600"
+                      onClick={() => {
+                        setEditingPurchase(item);
+                        setIsPurchaseModalOpen(true);
+                      }}
+                    >
+                      <Edit2 className="w-3 h-3 mr-1" /> Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-zinc-400 hover:text-red-600"
+                      onClick={() => void handleDeletePurchase(item.id, item.name)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <div className="overflow-x-auto max-h-[460px] overflow-y-auto border border-zinc-200 dark:border-zinc-800 rounded-2xl">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 z-10">
                 <tr>
@@ -529,6 +589,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
 

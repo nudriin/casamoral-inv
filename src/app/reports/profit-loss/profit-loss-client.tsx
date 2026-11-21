@@ -96,7 +96,7 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
 
       {/* Top 4 KPI Metric Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -116,7 +116,7 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -136,7 +136,7 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -156,7 +156,7 @@ export function ProfitLossClient({ statement }: ProfitLossClientProps) {
           </CardContent>
         </Card>
 
-        <Card className={`border-l-4 ${isProfitable ? "border-l-emerald-500" : "border-l-rose-500"}`}>
+        <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-zinc-500 font-medium flex items-center justify-between">
               <span className="flex items-center gap-1.5">

@@ -7,6 +7,7 @@ import { formatRupiah, formatDateIndo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ViewModeToggle, ViewMode } from "@/components/ui/view-mode-toggle";
 import {
   Search,
   Filter,
@@ -25,6 +26,7 @@ export function ReceivablesClient({ initialItems }: ReceivablesClientProps) {
   const [items] = useState<ReceivableItem[]>(initialItems);
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState<string>("ALL");
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -80,23 +82,26 @@ export function ReceivablesClient({ initialItems }: ReceivablesClientProps) {
             />
           </div>
 
-          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
-            <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1">
-              <Filter className="w-3 h-3" /> Kanal:
-            </span>
-            {(["ALL", "Direct", "Shopee"] as const).map((ch) => (
-              <button
-                key={ch}
-                onClick={() => setChannelFilter(ch)}
-                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
-                  channelFilter === ch
-                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white font-semibold"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-                }`}
-              >
-                {ch === "ALL" ? "Semua" : ch}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 max-w-full">
+            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-full overflow-x-auto max-w-full">
+              <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1 shrink-0">
+                <Filter className="w-3 h-3" /> Kanal:
+              </span>
+              {(["ALL", "Direct", "Shopee"] as const).map((ch) => (
+                <button
+                  key={ch}
+                  onClick={() => setChannelFilter(ch)}
+                  className={`text-xs px-3 py-1 rounded-full font-medium transition-all shrink-0 ${
+                    channelFilter === ch
+                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white font-semibold"
+                      : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                  }`}
+                >
+                  {ch === "ALL" ? "Semua" : ch}
+                </button>
+              ))}
+            </div>
+            <ViewModeToggle mode={viewMode} onChange={setViewMode} />
           </div>
         </div>
       </div>
@@ -112,8 +117,68 @@ export function ReceivablesClient({ initialItems }: ReceivablesClientProps) {
             Seluruh pesanan pada filter ini telah lunas atau tidak ditemukan.
           </p>
         </div>
+      ) : viewMode === "card" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredItems.map((item) => (
+            <div
+              key={item.order.id}
+              className="rounded-2xl border border-zinc-200/60 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:border-zinc-800/70 dark:bg-zinc-900/70 flex flex-col justify-between gap-3"
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                      {item.customerName}
+                    </div>
+                    <div className="text-xs text-zinc-500">{item.customerCity}</div>
+                  </div>
+                  {getAgingBadge(item.daysAging)}
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <Link
+                    href={`/orders/${item.order.id}`}
+                    className="font-mono font-semibold text-zinc-900 hover:text-orange-600 dark:text-zinc-100 hover:underline"
+                  >
+                    {item.order.order_number}
+                  </Link>
+                  <Badge variant="outline" className="text-[10px]">
+                    {item.order.channel}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 block">Total</span>
+                    <span className="font-mono font-medium text-zinc-700 dark:text-zinc-300">
+                      {formatRupiah(item.totalAmount)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-400 block">DP</span>
+                    <span className="font-mono font-medium text-zinc-700 dark:text-zinc-300">
+                      {formatRupiah(item.paidAmount)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-zinc-400 block">Sisa Piutang</span>
+                    <span className="font-mono font-bold text-orange-600 dark:text-orange-400">
+                      {formatRupiah(item.remainingAmount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Link href={`/orders/${item.order.id}/payments`} className="block pt-1">
+                <Button size="sm" variant="accent" className="w-full h-8 gap-1 text-xs font-semibold">
+                  <Coins className="w-3 h-3" /> Catat Bayar
+                </Button>
+              </Link>
+            </div>
+          ))}
+        </div>
       ) : (
-        <div className="rounded-xl border border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900 shadow-xs overflow-hidden">
+        <div className="rounded-2xl border border-zinc-200/60 bg-white dark:border-zinc-800/70 dark:bg-zinc-900/70 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-zinc-50 dark:bg-zinc-800/60 text-xs font-semibold text-zinc-600 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
