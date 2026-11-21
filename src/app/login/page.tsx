@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Lock, ShieldCheck, Delete, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
+import { Lock, ShieldCheck, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -50,22 +50,6 @@ function PinLoginForm() {
     }
   };
 
-  const handleDigitPress = (digit: string) => {
-    if (loading || pin.length >= 6) return;
-    const next = pin + digit;
-    setPin(next);
-    setErrorMsg(null);
-    if (next.length === 6) {
-      void submitPin(next);
-    }
-  };
-
-  const handleBackspace = () => {
-    if (loading || pin.length === 0) return;
-    setPin((prev) => prev.slice(0, -1));
-    setErrorMsg(null);
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleaned = e.target.value.replace(/\D/g, "").slice(0, 6);
     setPin(cleaned);
@@ -98,40 +82,18 @@ function PinLoginForm() {
             </div>
           )}
 
-          {/* 6-Digit Visual Indicator + Hidden/Accessible Input */}
+          {/* 6-Digit Visual Indicator with Transparent Native Input Overlay (for mobile & desktop keyboard) */}
           <div className="space-y-2">
-            <div
-              onClick={() => inputRef.current?.focus()}
-              className="grid grid-cols-6 gap-2 cursor-text"
-            >
-              {[0, 1, 2, 3, 4, 5].map((idx) => {
-                const char = pin[idx] || "";
-                const isActive = pin.length === idx;
-                return (
-                  <div
-                    key={idx}
-                    className={`h-12 rounded-xl border flex items-center justify-center text-lg font-mono font-bold transition-all ${
-                      isActive
-                        ? "border-amber-500 ring-2 ring-amber-500/20 bg-white dark:bg-zinc-900"
-                        : char
-                        ? "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
-                        : "border-zinc-200 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/40"
-                    }`}
-                  >
-                    {char ? (showPin ? char : "•") : ""}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
+            <div className="relative">
               <input
                 ref={inputRef}
                 type={showPin ? "text" : "password"}
                 inputMode="numeric"
+                pattern="[0-9]*"
                 autoComplete="one-time-code"
                 maxLength={6}
                 value={pin}
+                disabled={loading}
                 onChange={handleInputChange}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && pin.length === 6) {
@@ -139,66 +101,60 @@ function PinLoginForm() {
                   }
                 }}
                 aria-label="Masukkan 6-digit PIN"
-                className="sr-only"
+                className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-text"
               />
-              <span className="text-[11px] text-zinc-400">Ketik angka atau tekan keypad</span>
-              <button
-                type="button"
-                onClick={() => setShowPin((s) => !s)}
-                className="inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                {showPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                <span>{showPin ? "Sembunyikan" : "Tampilkan"}</span>
-              </button>
+              <div className="grid grid-cols-6 gap-2 pointer-events-none">
+                {[0, 1, 2, 3, 4, 5].map((idx) => {
+                  const char = pin[idx] || "";
+                  const isActive = pin.length === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`h-12 rounded-xl border flex items-center justify-center text-lg font-mono font-bold transition-all ${
+                        isActive
+                          ? "border-amber-500 ring-2 ring-amber-500/20 bg-white dark:bg-zinc-900"
+                          : char
+                          ? "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                          : "border-zinc-200 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/40"
+                      }`}
+                    >
+                      {char ? (showPin ? char : "•") : ""}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Numeric Keypad */}
-          <div className="grid grid-cols-3 gap-2">
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
-              <Button
-                key={d}
-                type="button"
-                variant="outline"
-                disabled={loading}
-                onClick={() => handleDigitPress(d)}
-                className="h-12 text-base font-mono font-semibold cursor-pointer"
-              >
-                {d}
-              </Button>
-            ))}
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={loading || pin.length === 0}
-              onClick={() => {
-                setPin("");
-                setErrorMsg(null);
-                inputRef.current?.focus();
-              }}
-              className="h-12 text-xs text-zinc-500 cursor-pointer"
-            >
-              Reset
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loading}
-              onClick={() => handleDigitPress("0")}
-              className="h-12 text-base font-mono font-semibold cursor-pointer"
-            >
-              0
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={loading || pin.length === 0}
-              onClick={handleBackspace}
-              aria-label="Hapus digit"
-              className="h-12 text-zinc-600 dark:text-zinc-300 cursor-pointer"
-            >
-              <Delete className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-zinc-400">Ketuk kotak di atas untuk ketik PIN</span>
+              <div className="flex items-center gap-3">
+                {pin.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => {
+                      setPin("");
+                      setErrorMsg(null);
+                      inputRef.current?.focus();
+                    }}
+                    className="text-[11px] text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPin((s) => !s);
+                    inputRef.current?.focus();
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
+                >
+                  {showPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  <span>{showPin ? "Sembunyikan" : "Tampilkan"}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <Button
