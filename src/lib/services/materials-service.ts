@@ -224,15 +224,38 @@ export async function deductBOMStockForOrder(order: Order): Promise<StockMovemen
     });
     generatedMovements.push(boxMov);
 
-    // 7. Bubble Wrap Roll (1 meter per unit)
+    // 7. Bubble Wrap Roll (240 cm = 2.4 meter per unit pesanan real)
+    const bubbleMeters = new Decimal(2.4).times(qty).toNumber();
     const bubbleMov = await recordStockMovement({
       material_id: "mat-07",
       movement_type: "PRODUCTION_USAGE",
-      quantity: -qty,
+      quantity: -bubbleMeters,
       reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${qty} m Bubble Wrap`,
+      notes: `Produksi ${order.order_number}: Pemakaian ${bubbleMeters} m (${240 * qty} cm) Bubble Wrap`,
     });
     generatedMovements.push(bubbleMov);
+
+    // 8. Kertas Packing Honeycomb (160 cm = 1.6 meter per unit pesanan real)
+    const honeycombMeters = new Decimal(1.6).times(qty).toNumber();
+    const honeycombMov = await recordStockMovement({
+      material_id: "mat-08",
+      movement_type: "PRODUCTION_USAGE",
+      quantity: -honeycombMeters,
+      reference_id: order.id,
+      notes: `Produksi ${order.order_number}: Pemakaian ${honeycombMeters} m (${160 * qty} cm) Kertas Honeycomb`,
+    });
+    generatedMovements.push(honeycombMov);
+
+    // 9. Skun Jarum Pipih (2 pcs per unit pesanan real)
+    const skunQty = 2 * qty;
+    const skunMov = await recordStockMovement({
+      material_id: "mat-09",
+      movement_type: "PRODUCTION_USAGE",
+      quantity: -skunQty,
+      reference_id: order.id,
+      notes: `Produksi ${order.order_number}: Pemakaian ${skunQty} pcs Skun Jarum Pipih`,
+    });
+    generatedMovements.push(skunMov);
   }
 
   return generatedMovements;

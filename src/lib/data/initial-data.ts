@@ -288,12 +288,48 @@ export const INITIAL_MATERIALS: Material[] = [
     name: "Kertas Packing Honeycomb 30cm x 50m",
     category: "packaging",
     unit: "meter",
-    current_stock: 100, // 2 Roll x 50 meter = 100 meter (pur-03)
+    current_stock: 100, // 2 Roll x 50 meter = 100 meter (pur-14)
     min_stock_alert: 10,
-    cost_per_unit: 1670, // Rp 83.500 / 50m = Rp 1.670 / meter
+    cost_per_unit: 1927, // Rp 192.690 / 100m = ~Rp 1.927 / meter
     supplier: "Shopee (2 Roll)",
-    created_at: "2026-08-01T00:00:00Z",
-    updated_at: "2026-08-01T00:00:00Z",
+    created_at: "2026-10-25T00:00:00Z",
+    updated_at: "2026-10-25T00:00:00Z",
+  },
+  {
+    id: "mat-09",
+    name: "Skun Jarum Pipih",
+    category: "electrical",
+    unit: "pcs",
+    current_stock: 150, // 50 + 100 pcs
+    min_stock_alert: 20,
+    cost_per_unit: 333,
+    supplier: "Shopee (BRI)",
+    created_at: "2026-10-18T00:00:00Z",
+    updated_at: "2026-10-18T00:00:00Z",
+  },
+  {
+    id: "mat-10",
+    name: "Isolasi / Lakban Packing",
+    category: "packaging",
+    unit: "meter",
+    current_stock: 100,
+    min_stock_alert: 10,
+    cost_per_unit: 500,
+    supplier: "Workshop",
+    created_at: "2026-10-19T00:00:00Z",
+    updated_at: "2026-10-19T00:00:00Z",
+  },
+  {
+    id: "mat-11",
+    name: "Lem Adhesive",
+    category: "other",
+    unit: "pcs",
+    current_stock: 20,
+    min_stock_alert: 3,
+    cost_per_unit: 1000,
+    supplier: "Workshop",
+    created_at: "2026-10-19T00:00:00Z",
+    updated_at: "2026-10-19T00:00:00Z",
   },
 ];
 

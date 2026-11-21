@@ -113,15 +113,24 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
   const [deductProtector, setDeductProtector] = useState(true);
   const [protectorQty, setProtectorQty] = useState(1);
 
+  const [deductSkun, setDeductSkun] = useState(true);
+  const [skunQty, setSkunQty] = useState(2);
+
   const [deductBox, setDeductBox] = useState(true);
   const [boxQty, setBoxQty] = useState(1);
 
   const [deductBubbleWrap, setDeductBubbleWrap] = useState(true);
-  const [bubbleWrapMeters, setBubbleWrapMeters] = useState(1);
+  const [bubbleWrapMeters, setBubbleWrapMeters] = useState(2.4);
 
-  const [deductHoneycomb, setDeductHoneycomb] = useState(false);
-  const [honeycombLength, setHoneycombLength] = useState(50);
+  const [deductHoneycomb, setDeductHoneycomb] = useState(true);
+  const [honeycombLength, setHoneycombLength] = useState(160);
   const [honeycombUnit, setHoneycombUnit] = useState<"cm" | "meter">("cm");
+
+  const [deductTape, setDeductTape] = useState(true);
+  const [tapeLength, setTapeLength] = useState(1);
+
+  const [deductGlue, setDeductGlue] = useState(true);
+  const [glueQty, setGlueQty] = useState(1);
 
   // Keep component quantities in sync with order quantity
   React.useEffect(() => {
@@ -129,9 +138,13 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
     setCableQty(quantity);
     setFittingQty(quantity);
     setProtectorQty(quantity);
+    setSkunQty(2 * quantity);
     setBoxQty(quantity);
-    setBubbleWrapMeters(quantity);
-  }, [quantity]);
+    setBubbleWrapMeters(Number((2.4 * quantity).toFixed(2)));
+    setHoneycombLength(honeycombUnit === "cm" ? 160 * quantity : Number((1.6 * quantity).toFixed(2)));
+    setTapeLength(quantity);
+    setGlueQty(quantity);
+  }, [quantity, honeycombUnit]);
 
   // Model filament BOM breakdown
   const filamentBreakdown = useMemo(() => {
@@ -274,6 +287,48 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
       }
     }
 
+    // 9. Skun Jarum Pipih (real: 2 pcs per pesanan)
+    if (deductSkun && skunQty > 0) {
+      const skunMat = list.find((m) => m.name.toLowerCase().includes("skun")) || {
+        id: "mat-09",
+        name: "Skun Jarum Pipih",
+      };
+      deductions.push({
+        material_id: skunMat.id,
+        name: skunMat.name,
+        quantity: skunQty,
+        unit: "pcs",
+      });
+    }
+
+    // 10. Isolasi / Lakban Packing (estimasi)
+    if (deductTape && tapeLength > 0) {
+      const tapeMat = list.find((m) => m.name.toLowerCase().includes("isolasi") || m.name.toLowerCase().includes("lakban")) || {
+        id: "mat-10",
+        name: "Isolasi / Lakban Packing",
+      };
+      deductions.push({
+        material_id: tapeMat.id,
+        name: tapeMat.name,
+        quantity: tapeLength,
+        unit: "meter",
+      });
+    }
+
+    // 11. Lem Adhesive (estimasi)
+    if (deductGlue && glueQty > 0) {
+      const glueMat = list.find((m) => m.name.toLowerCase().includes("lem") || m.name.toLowerCase().includes("adhesive")) || {
+        id: "mat-11",
+        name: "Lem Adhesive",
+      };
+      deductions.push({
+        material_id: glueMat.id,
+        name: glueMat.name,
+        quantity: glueQty,
+        unit: "pcs",
+      });
+    }
+
     return deductions;
   }, [
     materials,
@@ -290,6 +345,8 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
     fittingQty,
     deductProtector,
     protectorQty,
+    deductSkun,
+    skunQty,
     deductBox,
     boxQty,
     deductBubbleWrap,
@@ -297,6 +354,10 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
     deductHoneycomb,
     honeycombLength,
     honeycombUnit,
+    deductTape,
+    tapeLength,
+    deductGlue,
+    glueQty,
   ]);
 
   // UI status
@@ -862,6 +923,33 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                       </div>
                     )}
                   </div>
+
+                  {/* Skun Jarum Pipih */}
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={deductSkun}
+                        onChange={(e) => setDeductSkun(e.target.checked)}
+                        className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
+                      />
+                      <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
+                        Skun Jarum Pipih
+                      </span>
+                    </label>
+                    {deductSkun && (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min="1"
+                          value={skunQty}
+                          onChange={(e) => setSkunQty(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                        />
+                        <span className="text-[10px] text-zinc-400">pcs</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -959,12 +1047,74 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                         />
                         <select
                           value={honeycombUnit}
-                          onChange={(e) => setHoneycombUnit(e.target.value as any)}
+                          onChange={(e) => setHoneycombUnit(e.target.value as "cm" | "meter")}
                           className="h-6 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-1 text-[10px]"
                         >
                           <option value="cm">cm</option>
                           <option value="meter">meter</option>
                         </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Isolasi / Lakban Packing (Estimasi) */}
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1.5">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={deductTape}
+                        onChange={(e) => setDeductTape(e.target.checked)}
+                        className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
+                      />
+                      <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
+                        Isolasi / Lakban (Est.)
+                      </span>
+                    </label>
+                    {deductTape && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-400 text-[10px]">Estimasi:</span>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min="0.5"
+                            value={tapeLength}
+                            onChange={(e) => setTapeLength(Math.max(0.1, Number(e.target.value) || 1))}
+                            className="h-6 w-14 text-[11px] font-mono text-center p-1"
+                          />
+                          <span className="text-[10px] text-zinc-400">meter</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lem Adhesive (Estimasi) */}
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1.5">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={deductGlue}
+                        onChange={(e) => setDeductGlue(e.target.checked)}
+                        className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
+                      />
+                      <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
+                        Lem Adhesive (Est.)
+                      </span>
+                    </label>
+                    {deductGlue && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-400 text-[10px]">Estimasi:</span>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={glueQty}
+                            onChange={(e) => setGlueQty(Math.max(1, Number(e.target.value) || 1))}
+                            className="h-6 w-14 text-[11px] font-mono text-center p-1"
+                          />
+                          <span className="text-[10px] text-zinc-400">pakai</span>
+                        </div>
                       </div>
                     )}
                   </div>

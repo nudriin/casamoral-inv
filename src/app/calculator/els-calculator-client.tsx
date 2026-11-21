@@ -15,15 +15,13 @@ import {
   ElsCalculationAssumptions,
   ElsOverheadItem,
   ElsCapitalConfig,
-  DEFAULT_ELS_PRODUCTS,
-  DEFAULT_ELS_FILAMENTS,
-  DEFAULT_ELS_PRINTERS,
-  DEFAULT_ELS_ACCESSORIES,
-  DEFAULT_ELS_DEPRECIATION_ASSETS,
-  DEFAULT_ELS_ASSUMPTIONS,
+  CASAMORAL_REAL_PRODUCTS,
+  CASAMORAL_REAL_FILAMENTS,
+  CASAMORAL_REAL_PRINTERS,
+  CASAMORAL_REAL_ACCESSORIES,
+  CASAMORAL_REAL_DEPRECIATION_ASSETS,
   CASAMORAL_SHOPEE_ASSUMPTIONS,
   DEFAULT_ELS_OVERHEAD_ITEMS,
-  DEFAULT_ELS_CAPITAL,
   CASAMORAL_REAL_CAPITAL,
   calculateAssetsDepreciation,
   calculateElsProductRow,
@@ -71,21 +69,40 @@ import {
   Layers,
 } from "lucide-react";
 
-const STORAGE_KEY = "casamoral_els_studio_config_v2";
+const STORAGE_KEY = "casamoral_els_studio_config_v3";
 
-export function ElsCalculatorClient() {
+export function ElsCalculatorClient({ initialTotalCapital }: { initialTotalCapital?: number }) {
   // Navigation active tab
   const [activeTab, setActiveTab] = useState<"PRODUCTS" | "ASSUMPTIONS" | "DEPRECIATION" | "BEP" | "TIPS">("PRODUCTS");
 
-  // State for all data structures
-  const [products, setProducts] = useState<ElsProductItem[]>(DEFAULT_ELS_PRODUCTS);
-  const [filaments, setFilaments] = useState<ElsFilamentPrice[]>(DEFAULT_ELS_FILAMENTS);
-  const [printers, setPrinters] = useState<ElsPrinterConfig[]>(DEFAULT_ELS_PRINTERS);
-  const [accessories, setAccessories] = useState<ElsAccessoryPrice[]>(DEFAULT_ELS_ACCESSORIES);
-  const [assets, setAssets] = useState<ElsDepreciationAsset[]>(DEFAULT_ELS_DEPRECIATION_ASSETS);
+  // State for all data structures (synced with Casa Moral Master Data)
+  const [products, setProducts] = useState<ElsProductItem[]>(CASAMORAL_REAL_PRODUCTS);
+  const [filaments, setFilaments] = useState<ElsFilamentPrice[]>(CASAMORAL_REAL_FILAMENTS);
+  const [printers, setPrinters] = useState<ElsPrinterConfig[]>(CASAMORAL_REAL_PRINTERS);
+  const [accessories, setAccessories] = useState<ElsAccessoryPrice[]>(CASAMORAL_REAL_ACCESSORIES);
+  const [assets, setAssets] = useState<ElsDepreciationAsset[]>(CASAMORAL_REAL_DEPRECIATION_ASSETS);
   const [assumptions, setAssumptions] = useState<ElsCalculationAssumptions>(CASAMORAL_SHOPEE_ASSUMPTIONS);
   const [overheadItems, setOverheadItems] = useState<ElsOverheadItem[]>(DEFAULT_ELS_OVERHEAD_ITEMS);
-  const [capital, setCapital] = useState<ElsCapitalConfig>(CASAMORAL_REAL_CAPITAL);
+  const [capital, setCapital] = useState<ElsCapitalConfig>(() => {
+    if (initialTotalCapital && initialTotalCapital > 0) {
+      const baseSum =
+        CASAMORAL_REAL_CAPITAL.printersTotal +
+        CASAMORAL_REAL_CAPITAL.initialFilamentStock +
+        CASAMORAL_REAL_CAPITAL.initialAccessoriesStock +
+        CASAMORAL_REAL_CAPITAL.finishingTools +
+        CASAMORAL_REAL_CAPITAL.brandingSetup;
+      if (baseSum !== initialTotalCapital) {
+        return {
+          ...CASAMORAL_REAL_CAPITAL,
+          initialAccessoriesStock: Math.max(
+            0,
+            CASAMORAL_REAL_CAPITAL.initialAccessoriesStock + (initialTotalCapital - baseSum)
+          ),
+        };
+      }
+    }
+    return CASAMORAL_REAL_CAPITAL;
+  });
 
   // Persistence hydration state
   const [isHydrated, setIsHydrated] = useState(false);
@@ -211,19 +228,19 @@ export function ElsCalculatorClient() {
 
   // Handlers: Reset
   const handleResetToTemplate = () => {
-    if (confirm("Reset semua konfigurasi & data kembali ke Template Default Asli Casa Moral? Data kustom Anda saat ini akan ditimpa.")) {
-      setProducts(DEFAULT_ELS_PRODUCTS);
-      setFilaments(DEFAULT_ELS_FILAMENTS);
-      setPrinters(DEFAULT_ELS_PRINTERS);
-      setAccessories(DEFAULT_ELS_ACCESSORIES);
-      setAssets(DEFAULT_ELS_DEPRECIATION_ASSETS);
-      setAssumptions(DEFAULT_ELS_ASSUMPTIONS);
+    if (confirm("Reset semua konfigurasi & data kembali ke Preset Casa Moral terbaru (6 Model Lampu + Modal Rp 14.811.820)? Data kustom Anda saat ini akan ditimpa.")) {
+      setProducts(CASAMORAL_REAL_PRODUCTS);
+      setFilaments(CASAMORAL_REAL_FILAMENTS);
+      setPrinters(CASAMORAL_REAL_PRINTERS);
+      setAccessories(CASAMORAL_REAL_ACCESSORIES);
+      setAssets(CASAMORAL_REAL_DEPRECIATION_ASSETS);
+      setAssumptions(CASAMORAL_SHOPEE_ASSUMPTIONS);
       setOverheadItems(DEFAULT_ELS_OVERHEAD_ITEMS);
-      setCapital(DEFAULT_ELS_CAPITAL);
+      setCapital(CASAMORAL_REAL_CAPITAL);
       localStorage.removeItem(STORAGE_KEY);
       setSyncAlert({
         type: "info",
-        message: "Data dan konfigurasi Casa Moral berhasil di-reset ke template awal.",
+        message: "Data dan konfigurasi Casa Moral berhasil di-reset ke preset terbaru.",
       });
     }
   };
@@ -2142,7 +2159,7 @@ export function ElsCalculatorClient() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => setCapital(DEFAULT_ELS_CAPITAL)}
+                    onClick={() => setCapital(CASAMORAL_REAL_CAPITAL)}
                     className={`text-xs gap-1.5 h-8 cursor-pointer ${
                       summary.totalInitialCapital === 35617000
                         ? "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 font-bold"

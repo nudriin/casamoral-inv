@@ -48,7 +48,7 @@ const ROUTE_TITLES: Record<string, { title: string; subtitle: string }> = {
   },
   "/capital": {
     title: "Modal Usaha & Aset Tetap",
-    subtitle: "Pencatatan investasi mesin 3D printer dan belanja modal awal Rp 11.440.748",
+    subtitle: "Pencatatan investasi mesin 3D printer, peralatan workshop, dan belanja modal usaha Casa Moral",
   },
   "/expenses": {
     title: "Pengeluaran Operasional & Overhead",

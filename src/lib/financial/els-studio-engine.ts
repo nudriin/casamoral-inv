@@ -443,14 +443,68 @@ export const DEFAULT_ELS_CAPITAL: ElsCapitalConfig = {
   brandingSetup: 500000,
 };
 
-// Modal Riil Usaha Casa Moral (sesuai 23 transaksi belanja modal di menu Modal & Aset)
+// Modal Riil Usaha Casa Moral (sesuai 43 transaksi belanja modal di menu Modal & Aset = Rp 14.811.820)
 export const CASAMORAL_REAL_CAPITAL: ElsCapitalConfig = {
-  printersTotal: 9556520, // Mesin Bambulab A1 Mini (3.589.221) + Anycubic Kobra X (5.872.800) + setup fee
-  initialFilamentStock: 1082561, // Stok awal filamen eSUN & IndoCart
-  initialAccessoriesStock: 707168, // Komponen fitting, kabel, bohlam, packaging kardus & bubble wrap
-  finishingTools: 94499, // Jangka sorong digital + magnet neodium + tools
+  printersTotal: 9460021, // Bambulab A1 Mini (3.589.221) + Anycubic Kobra X (5.870.800)
+  initialFilamentStock: 2640818, // Stok filamen eSUN, IndoCart & Elegoo (11 transaksi CSV)
+  initialAccessoriesStock: 1926882, // Kelistrikan (1.407.828) + Kemasan (519.054)
+  finishingTools: 784099, // Meja printer, heat gun, dry box, caliper, magnet, stempel, Mr.DIY
   brandingSetup: 0,
 };
+
+export const CASAMORAL_REAL_FILAMENTS: ElsFilamentPrice[] = [
+  { id: "cm-fil-esun", brand: "eSUN PETG / PLA", type: "PETG/PLA", pricePerKg: 135000, notes: "Rata-rata pembelian eSUN" },
+  { id: "cm-fil-indocart", brand: "IndoCart PLA Basic", type: "PLA Basic", pricePerKg: 137000, notes: "Rata-rata pembelian IndoCart" },
+  { id: "cm-fil-elegoo", brand: "Elegoo PLA White", type: "PLA", pricePerKg: 133300, notes: "Pembelian Elegoo 14/11/2026" },
+  { id: "cm-fil-std", brand: "Standar HPP Casa Moral", type: "PLA/PETG", pricePerKg: 180000, notes: "Acuan konservatif Excel V2" },
+];
+
+export const CASAMORAL_REAL_PRINTERS: ElsPrinterConfig[] = [
+  { id: "cm-prt-a1mini", name: "Bambulab A1 Mini", powerWatts: 60, usefulLifeMonths: 24, notes: "Printer utama Casa Moral (60W rata-rata)" },
+  { id: "cm-prt-kobra", name: "Anycubic Kobra X", powerWatts: 110, usefulLifeMonths: 24, notes: "Printer kedua Casa Moral (110W rata-rata)" },
+];
+
+export const CASAMORAL_REAL_DEPRECIATION_ASSETS: ElsDepreciationAsset[] = [
+  { id: "cm-dep-a1mini", name: "Bambulab A1 Mini", purchasePrice: 3589221, residualValue: 500000, usefulLifeMonths: 24, estimatedHoursPerMonth: 150, notes: "Harga perolehan CSV 23/09/2026" },
+  { id: "cm-dep-kobra", name: "Anycubic Kobra X", purchasePrice: 5870800, residualValue: 500000, usefulLifeMonths: 24, estimatedHoursPerMonth: 150, notes: "Harga perolehan CSV 14/10/2026" },
+  { id: "cm-dep-tools", name: "Peralatan Workshop & Meja", purchasePrice: 784099, residualValue: 0, usefulLifeMonths: 24, estimatedHoursPerMonth: 150, notes: "Meja, Heat Gun, Dry Box, Caliper, dll." },
+];
+
+// Komponen & Pemakaian Kemasan Real Casa Moral per Pesanan
+export const CASAMORAL_REAL_ACCESSORIES: ElsAccessoryPrice[] = [
+  { id: "cm-acc-led", name: "Lampu Inlite LED 3W", price: 14800, unit: "per pcs", notes: "Harga pembelian terakhir Rp 14.800/pcs" },
+  { id: "cm-acc-fitting", name: "Fitting E27", price: 5700, unit: "per pcs", notes: "Fitting lampu E27" },
+  { id: "cm-acc-kabel", name: "Kabel Sakelar On/Off", price: 9360, unit: "per pcs", notes: "Kabel sakelar lampu" },
+  { id: "cm-acc-karet", name: "Karet Pelindung Kabel", price: 675, unit: "per pcs", notes: "Grommet pelindung kabel" },
+  { id: "cm-acc-skun", name: "Skun Jarum Pipih", price: 333, unit: "per pcs", notes: "Pemakaian real: 2 pcs per pesanan (Rp 666)" },
+  { id: "cm-acc-kardus", name: "Kardus Packing 20x20x20", price: 3500, unit: "per pcs", notes: "Box kemasan luar" },
+  { id: "cm-acc-bubble", name: "Bubble Wrap 30cm (cm)", price: 15, unit: "per cm", notes: "Pemakaian real: 240 cm per pesanan (Rp 3.600)" },
+  { id: "cm-acc-honeycomb", name: "Kertas Packing Honeycomb (cm)", price: 19.27, unit: "per cm", notes: "Pemakaian real: 160 cm per pesanan (~Rp 3.083)" },
+  { id: "cm-acc-isolasi", name: "Isolasi / Lakban Packing (Estimasi)", price: 500, unit: "per pesanan", notes: "Estimasi pemakaian isolasi per pesanan (dapat disesuaikan)" },
+  { id: "cm-acc-lem", name: "Lem Adhesive (Estimasi)", price: 1000, unit: "per pesanan", notes: "Estimasi pemakaian lem adhesive per pesanan (dapat disesuaikan)" },
+];
+
+const DEFAULT_LAMP_ACCESSORIES: Record<string, number> = {
+  "cm-acc-led": 1,
+  "cm-acc-fitting": 1,
+  "cm-acc-kabel": 1,
+  "cm-acc-karet": 1,
+  "cm-acc-skun": 2,
+  "cm-acc-kardus": 1,
+  "cm-acc-bubble": 240,
+  "cm-acc-honeycomb": 160,
+  "cm-acc-isolasi": 1,
+  "cm-acc-lem": 1,
+};
+
+export const CASAMORAL_REAL_PRODUCTS: ElsProductItem[] = [
+  { id: "prod-01", no: 1, name: "Lumi", printer: "Bambulab A1 Mini", filamentBrand: "Standar HPP Casa Moral", weightGram: 166.4, printTimeMinutes: 240, purgeWasteFactor: 0.05, accessoryQuantities: { ...DEFAULT_LAMP_ACCESSORIES }, packagingPackage: 0, sellingPrice: 130000, freeShippingXtra: true },
+  { id: "prod-02", no: 2, name: "Ollie", printer: "Bambulab A1 Mini", filamentBrand: "Standar HPP Casa Moral", weightGram: 203.08, printTimeMinutes: 533, purgeWasteFactor: 0.05, accessoryQuantities: { ...DEFAULT_LAMP_ACCESSORIES }, packagingPackage: 0, sellingPrice: 150000, freeShippingXtra: true },
+  { id: "prod-03", no: 3, name: "Kumo", printer: "Bambulab A1 Mini", filamentBrand: "Standar HPP Casa Moral", weightGram: 170.13, printTimeMinutes: 270, purgeWasteFactor: 0.05, accessoryQuantities: { ...DEFAULT_LAMP_ACCESSORIES }, packagingPackage: 0, sellingPrice: 135000, freeShippingXtra: true },
+  { id: "prod-04", no: 4, name: "Pomi", printer: "Bambulab A1 Mini", filamentBrand: "Standar HPP Casa Moral", weightGram: 268.76, printTimeMinutes: 360, purgeWasteFactor: 0.05, accessoryQuantities: { ...DEFAULT_LAMP_ACCESSORIES }, packagingPackage: 0, sellingPrice: 150000, freeShippingXtra: true },
+  { id: "prod-05", no: 5, name: "Nomi", printer: "Bambulab A1 Mini", filamentBrand: "Standar HPP Casa Moral", weightGram: 190.0, printTimeMinutes: 280, purgeWasteFactor: 0.05, accessoryQuantities: { ...DEFAULT_LAMP_ACCESSORIES }, packagingPackage: 0, sellingPrice: 140000, freeShippingXtra: true },
+  { id: "prod-06", no: 6, name: "Lyra", printer: "Bambulab A1 Mini", filamentBrand: "Standar HPP Casa Moral", weightGram: 233.32, printTimeMinutes: 330, purgeWasteFactor: 0.05, accessoryQuantities: { ...DEFAULT_LAMP_ACCESSORIES }, packagingPackage: 0, sellingPrice: 190000, freeShippingXtra: true },
+];
 
 // ============================================================================
 // CALCULATION LOGIC IMPLEMENTATION WITH DECIMAL.JS
