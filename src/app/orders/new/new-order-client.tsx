@@ -96,41 +96,87 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("UNPAID");
   const [dpAmount, setDpAmount] = useState<number | "">("");
 
-  // Checkout Material Deductions States
+  // Helper to find best default material ID from /inventory (prefers stock > 0)
+  const pickDefaultMaterialId = (keywords: string[], fallbackId: string, category?: Material["category"]) => {
+    const matches = materials.filter(
+      (m) =>
+        (category && m.category === category) ||
+        keywords.some((kw) => m.name.toLowerCase().includes(kw))
+    );
+    const inStock = matches.find((m) => m.current_stock > 0);
+    return (inStock || matches[0])?.id || fallbackId;
+  };
+
+  // Checkout Material Deductions States (synced with /inventory materials)
   const [deductFilament, setDeductFilament] = useState(true);
+  const [selectedFilamentId, setSelectedFilamentId] = useState(() =>
+    pickDefaultMaterialId(["filamen", "pla", "petg"], "mat-01", "filament")
+  );
   const [customFilamentGrams, setCustomFilamentGrams] = useState<number | "">("");
 
   const [deductBulb, setDeductBulb] = useState(true);
+  const [selectedBulbId, setSelectedBulbId] = useState(() =>
+    pickDefaultMaterialId(["lampu", "led", "bohlam", "inlite", "meval"], "mat-02")
+  );
   const [bulbVariant, setBulbVariant] = useState<"warm_white" | "cool_white" | "meval">("warm_white");
   const [bulbQty, setBulbQty] = useState(1);
 
   const [deductCable, setDeductCable] = useState(true);
+  const [selectedCableId, setSelectedCableId] = useState(() =>
+    pickDefaultMaterialId(["kabel sakelar", "sakelar"], "mat-04")
+  );
   const [cableQty, setCableQty] = useState(1);
 
   const [deductFitting, setDeductFitting] = useState(true);
+  const [selectedFittingId, setSelectedFittingId] = useState(() =>
+    pickDefaultMaterialId(["fitting"], "mat-03")
+  );
   const [fittingQty, setFittingQty] = useState(1);
 
   const [deductProtector, setDeductProtector] = useState(true);
+  const [selectedProtectorId, setSelectedProtectorId] = useState(() =>
+    pickDefaultMaterialId(["pelindung"], "mat-05")
+  );
   const [protectorQty, setProtectorQty] = useState(1);
 
   const [deductSkun, setDeductSkun] = useState(true);
+  const [selectedSkunId, setSelectedSkunId] = useState(() =>
+    pickDefaultMaterialId(["skun"], "mat-09")
+  );
   const [skunQty, setSkunQty] = useState(2);
 
   const [deductBox, setDeductBox] = useState(true);
+  const [selectedBoxId, setSelectedBoxId] = useState(() =>
+    pickDefaultMaterialId(["kardus", "karton"], "mat-06")
+  );
   const [boxQty, setBoxQty] = useState(1);
 
   const [deductBubbleWrap, setDeductBubbleWrap] = useState(true);
+  const [selectedBubbleWrapId, setSelectedBubbleWrapId] = useState(() =>
+    pickDefaultMaterialId(["bubble wrap", "bubble"], "mat-07")
+  );
   const [bubbleWrapMeters, setBubbleWrapMeters] = useState(2.4);
 
   const [deductHoneycomb, setDeductHoneycomb] = useState(true);
+  const [selectedHoneycombId, setSelectedHoneycombId] = useState(() =>
+    pickDefaultMaterialId(["honeycomb"], "mat-08")
+  );
   const [honeycombLength, setHoneycombLength] = useState(160);
   const [honeycombUnit, setHoneycombUnit] = useState<"cm" | "meter">("cm");
 
   const [deductTape, setDeductTape] = useState(true);
+  const [selectedTapeId, setSelectedTapeId] = useState(() =>
+    pickDefaultMaterialId(["isolasi", "lakban"], "mat-10")
+  );
   const [tapeLength, setTapeLength] = useState(1);
 
   const [deductGlue, setDeductGlue] = useState(true);
+  const [selectedGlueId, setSelectedGlueId] = useState(() =>
+    pickDefaultMaterialId(["lem", "adhesive"], "mat-11")
+  );
   const [glueQty, setGlueQty] = useState(1);
+
+  const [extraDeductions, setExtraDeductions] = useState<Array<{ material_id: string; quantity: number }>>([]);
 
   // Keep component quantities in sync with order quantity
   React.useEffect(() => {
@@ -159,22 +205,21 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
     return { shade, base, cap, totalPerUnit, totalGrams };
   }, [selectedProduct, hasCap, quantity]);
 
-  // Compute deductions to pass to checkout
+  // Compute deductions to pass to checkout (strictly synced with selected /inventory materials)
   const checkoutDeductions = useMemo<CheckoutDeductionItem[]>(() => {
     const list = materials && materials.length > 0 ? materials : [];
+    const findMat = (id: string, fallbackName: string) =>
+      list.find((m) => m.id === id) || { id, name: fallbackName, unit: "pcs" as const };
     const deductions: CheckoutDeductionItem[] = [];
 
     // 1. Filamen (calculated from model BOM)
     if (deductFilament) {
       const grams = customFilamentGrams !== "" ? Number(customFilamentGrams) : filamentBreakdown.totalGrams;
       if (grams > 0) {
-        const filMat = list.find((m) => m.category === "filament") || {
-          id: "mat-01",
-          name: "Filamen PLA/PETG Standar (Campuran)",
-        };
+        const filMat = findMat(selectedFilamentId, "Filamen PLA/PETG Standar (Campuran)");
         deductions.push({
           material_id: filMat.id,
-          name: `Filamen (Model ${formatModelName(selectedProduct)})`,
+          name: `${filMat.name} (Model ${formatModelName(selectedProduct)})`,
           quantity: grams,
           unit: "gram",
         });
@@ -183,9 +228,7 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
 
     // 2. Lampu LED Bulb 3W
     if (deductBulb && bulbQty > 0) {
-      const bulbMat = list.find(
-        (m) => m.name.toLowerCase().includes("lampu") || m.name.toLowerCase().includes("led")
-      ) || { id: "mat-02", name: "Lampu LED Bulb / Module Inlite 3W" };
+      const bulbMat = findMat(selectedBulbId, "Lampu LED Bulb / Module Inlite 3W");
       const variantName =
         bulbVariant === "warm_white"
           ? "Inlite 3W Warm White (Kuning)"
@@ -194,139 +237,127 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
           : "Meval 3W (Kuning)";
       deductions.push({
         material_id: bulbMat.id,
-        name: `Bohlam LED 3W - ${variantName}`,
+        name: `${bulbMat.name} - ${variantName}`,
         quantity: bulbQty,
-        unit: "pcs",
+        unit: bulbMat.unit || "pcs",
       });
     }
 
     // 3. Kabel Sakelar On/Off
     if (deductCable && cableQty > 0) {
-      const cableMat = list.find((m) => m.name.toLowerCase().includes("kabel sakelar")) || {
-        id: "mat-04",
-        name: "Kabel Sakelar On/Off",
-      };
+      const cableMat = findMat(selectedCableId, "Kabel Sakelar On/Off");
       deductions.push({
         material_id: cableMat.id,
         name: cableMat.name,
         quantity: cableQty,
-        unit: "pcs",
+        unit: cableMat.unit || "pcs",
       });
     }
 
     // 4. Fitting Lampu E27
     if (deductFitting && fittingQty > 0) {
-      const fitMat = list.find((m) => m.name.toLowerCase().includes("fitting")) || {
-        id: "mat-03",
-        name: "Fitting Lampu E27",
-      };
+      const fitMat = findMat(selectedFittingId, "Fitting Lampu E27");
       deductions.push({
         material_id: fitMat.id,
         name: fitMat.name,
         quantity: fittingQty,
-        unit: "pcs",
+        unit: fitMat.unit || "pcs",
       });
     }
 
     // 5. Karet Pelindung Kabel
     if (deductProtector && protectorQty > 0) {
-      const protMat = list.find((m) => m.name.toLowerCase().includes("pelindung")) || {
-        id: "mat-05",
-        name: "Karet Pelindung Kabel",
-      };
+      const protMat = findMat(selectedProtectorId, "Karet Pelindung Kabel");
       deductions.push({
         material_id: protMat.id,
         name: protMat.name,
         quantity: protectorQty,
-        unit: "pcs",
+        unit: protMat.unit || "pcs",
       });
     }
 
-    // 6. Kardus Kemasan Karton 20x20x20
+    // 6. Kardus Kemasan
     if (deductBox && boxQty > 0) {
-      const boxMat = list.find((m) => m.name.toLowerCase().includes("kardus")) || {
-        id: "mat-06",
-        name: "Kardus Kemasan Karton 20x20x20",
-      };
+      const boxMat = findMat(selectedBoxId, "Kardus Kemasan Karton 20x20x20");
       deductions.push({
         material_id: boxMat.id,
         name: boxMat.name,
         quantity: boxQty,
-        unit: "pcs",
+        unit: boxMat.unit || "pcs",
       });
     }
 
     // 7. Bubble Wrap Roll
     if (deductBubbleWrap && bubbleWrapMeters > 0) {
-      const bwMat = list.find((m) => m.name.toLowerCase().includes("bubble wrap")) || {
-        id: "mat-07",
-        name: "Bubble Wrap Roll 30cm x 50m",
-      };
+      const bwMat = findMat(selectedBubbleWrapId, "Bubble Wrap Roll 30cm x 50m");
       deductions.push({
         material_id: bwMat.id,
         name: bwMat.name,
         quantity: bubbleWrapMeters,
-        unit: "meter",
+        unit: bwMat.unit || "meter",
       });
     }
 
     // 8. Kertas Packing Honeycomb
     if (deductHoneycomb && honeycombLength > 0) {
       const meters = honeycombUnit === "cm" ? Number((honeycombLength / 100).toFixed(2)) : honeycombLength;
-      const hcMat = list.find((m) => m.name.toLowerCase().includes("honeycomb")) || {
-        id: "mat-08",
-        name: "Kertas Packing Honeycomb 30cm x 50m",
-      };
+      const hcMat = findMat(selectedHoneycombId, "Kertas Packing Honeycomb 30cm x 50m");
       if (meters > 0) {
         deductions.push({
           material_id: hcMat.id,
-          name: `Kertas Packing Honeycomb (${honeycombLength} ${honeycombUnit})`,
+          name: `${hcMat.name} (${honeycombLength} ${honeycombUnit})`,
           quantity: meters,
-          unit: "meter",
+          unit: hcMat.unit || "meter",
         });
       }
     }
 
-    // 9. Skun Jarum Pipih (real: 2 pcs per pesanan)
+    // 9. Skun Jarum Pipih
     if (deductSkun && skunQty > 0) {
-      const skunMat = list.find((m) => m.name.toLowerCase().includes("skun")) || {
-        id: "mat-09",
-        name: "Skun Jarum Pipih",
-      };
+      const skunMat = findMat(selectedSkunId, "Skun Jarum Pipih");
       deductions.push({
         material_id: skunMat.id,
         name: skunMat.name,
         quantity: skunQty,
-        unit: "pcs",
+        unit: skunMat.unit || "pcs",
       });
     }
 
-    // 10. Isolasi / Lakban Packing (estimasi)
+    // 10. Isolasi / Lakban Packing
     if (deductTape && tapeLength > 0) {
-      const tapeMat = list.find((m) => m.name.toLowerCase().includes("isolasi") || m.name.toLowerCase().includes("lakban")) || {
-        id: "mat-10",
-        name: "Isolasi / Lakban Packing",
-      };
+      const tapeMat = findMat(selectedTapeId, "Isolasi / Lakban Packing");
       deductions.push({
         material_id: tapeMat.id,
         name: tapeMat.name,
         quantity: tapeLength,
-        unit: "meter",
+        unit: tapeMat.unit || "meter",
       });
     }
 
-    // 11. Lem Adhesive (estimasi)
+    // 11. Lem Adhesive
     if (deductGlue && glueQty > 0) {
-      const glueMat = list.find((m) => m.name.toLowerCase().includes("lem") || m.name.toLowerCase().includes("adhesive")) || {
-        id: "mat-11",
-        name: "Lem Adhesive",
-      };
+      const glueMat = findMat(selectedGlueId, "Lem Adhesive");
       deductions.push({
         material_id: glueMat.id,
         name: glueMat.name,
         quantity: glueQty,
-        unit: "pcs",
+        unit: glueMat.unit || "pcs",
       });
+    }
+
+    // 12. Extra custom materials picked from /inventory
+    for (const extra of extraDeductions) {
+      if (extra.material_id && extra.quantity > 0) {
+        const mat = list.find((m) => m.id === extra.material_id);
+        if (mat) {
+          deductions.push({
+            material_id: mat.id,
+            name: mat.name,
+            quantity: extra.quantity,
+            unit: mat.unit,
+          });
+        }
+      }
     }
 
     return deductions;
@@ -358,7 +389,67 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
     tapeLength,
     deductGlue,
     glueQty,
+    selectedFilamentId,
+    selectedBulbId,
+    selectedCableId,
+    selectedFittingId,
+    selectedProtectorId,
+    selectedSkunId,
+    selectedBoxId,
+    selectedBubbleWrapId,
+    selectedHoneycombId,
+    selectedTapeId,
+    selectedGlueId,
+    extraDeductions,
   ]);
+
+  const getMaterialOptions = (keywords: string[], category?: Material["category"]) => {
+    const matched = materials.filter(
+      (m) =>
+        (category && m.category === category) ||
+        keywords.some((kw) => m.name.toLowerCase().includes(kw))
+    );
+    const others = materials.filter((m) => !matched.some((x) => x.id === m.id));
+    return [...matched, ...others];
+  };
+
+  const renderMaterialSelect = (
+    selectedId: string,
+    onChange: (id: string) => void,
+    keywords: string[],
+    neededQty: number,
+    category?: Material["category"]
+  ) => {
+    const options = getMaterialOptions(keywords, category);
+    const currentMat = materials.find((m) => m.id === selectedId);
+    const isLow = currentMat ? currentMat.current_stock < neededQty : false;
+
+    return (
+      <div className="space-y-1">
+        <select
+          value={selectedId}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-7 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2 text-[11px] cursor-pointer text-zinc-800 dark:text-zinc-200"
+        >
+          {options.length === 0 ? (
+            <option value={selectedId}>Default Inventori</option>
+          ) : (
+            options.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} (Stok: {m.current_stock} {m.unit})
+              </option>
+            ))
+          )}
+        </select>
+        {currentMat && (
+          <div className={`text-[10px] font-medium ${isLow ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+            Stok /inventory: {currentMat.current_stock} {currentMat.unit}
+            {isLow ? ` (Kurang dari ${neededQty} ${currentMat.unit})` : ""}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // UI status
   const [loading, setLoading] = useState(false);
@@ -783,20 +874,32 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                 </div>
 
                 {deductFilament && (
-                  <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-[11px]">
-                    <span className="text-zinc-500">Sesuaikan Gramasi (Opsional):</span>
-                    <Input
-                      type="number"
-                      step="any"
-                      min="0"
-                      placeholder={filamentBreakdown.totalGrams.toString()}
-                      value={customFilamentGrams}
-                      onChange={(e) =>
-                        setCustomFilamentGrams(e.target.value === "" ? "" : Number(e.target.value))
-                      }
-                      className="h-7 w-28 text-xs font-mono font-semibold"
-                    />
-                    <span className="text-zinc-400 text-[10px]">gram (Default: {filamentBreakdown.totalGrams}g)</span>
+                  <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-[11px]">
+                    <div>
+                      <span className="text-zinc-500 block mb-1">Pilih Stok Filamen dari /inventory:</span>
+                      {renderMaterialSelect(
+                        selectedFilamentId,
+                        setSelectedFilamentId,
+                        ["filamen", "pla", "petg"],
+                        customFilamentGrams !== "" ? Number(customFilamentGrams) : filamentBreakdown.totalGrams,
+                        "filament"
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-500">Sesuaikan Gramasi (Opsional):</span>
+                      <Input
+                        type="number"
+                        step="any"
+                        min="0"
+                        placeholder={filamentBreakdown.totalGrams.toString()}
+                        value={customFilamentGrams}
+                        onChange={(e) =>
+                          setCustomFilamentGrams(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        className="h-7 w-28 text-xs font-mono font-semibold"
+                      />
+                      <span className="text-zinc-400 text-[10px]">gram (Default: {filamentBreakdown.totalGrams}g)</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -824,131 +927,153 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                         </span>
                       </div>
                       {deductBulb && (
-                        <span className="font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
-                          {bulbQty} pcs
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={bulbQty}
+                            onChange={(e) => setBulbQty(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                          />
+                          <span className="text-[10px] text-zinc-400">pcs</span>
+                        </div>
                       )}
                     </label>
 
                     {deductBulb && (
-                      <select
-                        value={bulbVariant}
-                        onChange={(e) => setBulbVariant(e.target.value as any)}
-                        className="w-full h-7 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2 text-[11px] cursor-pointer"
-                      >
-                        <option value="warm_white">Inlite 3W - Warm White (Kuning)</option>
-                        <option value="cool_white">Inlite 3W - Cool White (Putih)</option>
-                        <option value="meval">Meval 3W (Kuning)</option>
-                      </select>
+                      <div className="space-y-1.5">
+                        {renderMaterialSelect(selectedBulbId, setSelectedBulbId, ["lampu", "led", "bohlam", "inlite", "meval"], bulbQty, "electrical")}
+                        <select
+                          value={bulbVariant}
+                          onChange={(e) => setBulbVariant(e.target.value as any)}
+                          className="w-full h-7 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2 text-[11px] cursor-pointer"
+                        >
+                          <option value="warm_white">Catatan: Inlite 3W - Warm White (Kuning)</option>
+                          <option value="cool_white">Catatan: Inlite 3W - Cool White (Putih)</option>
+                          <option value="meval">Catatan: Meval 3W (Kuning)</option>
+                        </select>
+                      </div>
                     )}
                   </div>
 
                   {/* Kabel Sakelar */}
-                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={deductCable}
-                        onChange={(e) => setDeductCable(e.target.checked)}
-                        className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
-                      />
-                      <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
-                        Kabel Sakelar On/Off
-                      </span>
-                    </label>
-                    {deductCable && (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={cableQty}
-                          onChange={(e) => setCableQty(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={deductCable}
+                          onChange={(e) => setDeductCable(e.target.checked)}
+                          className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
                         />
-                        <span className="text-[10px] text-zinc-400">pcs</span>
-                      </div>
-                    )}
+                        <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
+                          Kabel Sakelar On/Off
+                        </span>
+                      </label>
+                      {deductCable && (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={cableQty}
+                            onChange={(e) => setCableQty(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                          />
+                          <span className="text-[10px] text-zinc-400">pcs</span>
+                        </div>
+                      )}
+                    </div>
+                    {deductCable && renderMaterialSelect(selectedCableId, setSelectedCableId, ["kabel sakelar", "sakelar"], cableQty, "electrical")}
                   </div>
 
                   {/* Fitting Lampu E27 */}
-                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={deductFitting}
-                        onChange={(e) => setDeductFitting(e.target.checked)}
-                        className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
-                      />
-                      <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
-                        Fitting Lampu E27
-                      </span>
-                    </label>
-                    {deductFitting && (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={fittingQty}
-                          onChange={(e) => setFittingQty(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={deductFitting}
+                          onChange={(e) => setDeductFitting(e.target.checked)}
+                          className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
                         />
-                        <span className="text-[10px] text-zinc-400">pcs</span>
-                      </div>
-                    )}
+                        <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
+                          Fitting Lampu E27
+                        </span>
+                      </label>
+                      {deductFitting && (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={fittingQty}
+                            onChange={(e) => setFittingQty(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                          />
+                          <span className="text-[10px] text-zinc-400">pcs</span>
+                        </div>
+                      )}
+                    </div>
+                    {deductFitting && renderMaterialSelect(selectedFittingId, setSelectedFittingId, ["fitting"], fittingQty, "electrical")}
                   </div>
 
                   {/* Karet Pelindung Kabel */}
-                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={deductProtector}
-                        onChange={(e) => setDeductProtector(e.target.checked)}
-                        className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
-                      />
-                      <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
-                        Karet Pelindung Kabel
-                      </span>
-                    </label>
-                    {deductProtector && (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={protectorQty}
-                          onChange={(e) => setProtectorQty(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={deductProtector}
+                          onChange={(e) => setDeductProtector(e.target.checked)}
+                          className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
                         />
-                        <span className="text-[10px] text-zinc-400">pcs</span>
-                      </div>
-                    )}
+                        <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
+                          Karet Pelindung Kabel
+                        </span>
+                      </label>
+                      {deductProtector && (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={protectorQty}
+                            onChange={(e) => setProtectorQty(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                          />
+                          <span className="text-[10px] text-zinc-400">pcs</span>
+                        </div>
+                      )}
+                    </div>
+                    {deductProtector && renderMaterialSelect(selectedProtectorId, setSelectedProtectorId, ["pelindung"], protectorQty, "electrical")}
                   </div>
 
                   {/* Skun Jarum Pipih */}
-                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={deductSkun}
-                        onChange={(e) => setDeductSkun(e.target.checked)}
-                        className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
-                      />
-                      <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
-                        Skun Jarum Pipih
-                      </span>
-                    </label>
-                    {deductSkun && (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={skunQty}
-                          onChange={(e) => setSkunQty(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={deductSkun}
+                          onChange={(e) => setDeductSkun(e.target.checked)}
+                          className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
                         />
-                        <span className="text-[10px] text-zinc-400">pcs</span>
-                      </div>
-                    )}
+                        <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
+                          Skun Jarum Pipih
+                        </span>
+                      </label>
+                      {deductSkun && (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={skunQty}
+                            onChange={(e) => setSkunQty(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                          />
+                          <span className="text-[10px] text-zinc-400">pcs</span>
+                        </div>
+                      )}
+                    </div>
+                    {deductSkun && renderMaterialSelect(selectedSkunId, setSelectedSkunId, ["skun"], skunQty, "electrical")}
                   </div>
                 </div>
               </div>
@@ -961,7 +1086,7 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                  {/* Kardus 20x20x20 */}
+                  {/* Kardus */}
                   <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1.5">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -971,21 +1096,24 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                         className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
                       />
                       <span className="font-medium text-zinc-800 dark:text-zinc-200 text-[11px]">
-                        Kardus Karton 20x20x20
+                        Kardus Packing
                       </span>
                     </label>
                     {deductBox && (
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-400 text-[10px]">Kuantitas:</span>
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="number"
-                            min="1"
-                            value={boxQty}
-                            onChange={(e) => setBoxQty(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="h-6 w-12 text-[11px] font-mono text-center p-1"
-                          />
-                          <span className="text-[10px] text-zinc-400">pcs</span>
+                      <div className="space-y-1.5">
+                        {renderMaterialSelect(selectedBoxId, setSelectedBoxId, ["kardus", "karton"], boxQty, "packaging")}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-400 text-[10px]">Kuantitas:</span>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={boxQty}
+                              onChange={(e) => setBoxQty(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="h-6 w-12 text-[11px] font-mono text-center p-1"
+                            />
+                            <span className="text-[10px] text-zinc-400">pcs</span>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1005,18 +1133,21 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                       </span>
                     </label>
                     {deductBubbleWrap && (
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-400 text-[10px]">Panjang:</span>
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="number"
-                            step="0.5"
-                            min="0.5"
-                            value={bubbleWrapMeters}
-                            onChange={(e) => setBubbleWrapMeters(Math.max(0.1, Number(e.target.value) || 1))}
-                            className="h-6 w-14 text-[11px] font-mono text-center p-1"
-                          />
-                          <span className="text-[10px] text-zinc-400">meter</span>
+                      <div className="space-y-1.5">
+                        {renderMaterialSelect(selectedBubbleWrapId, setSelectedBubbleWrapId, ["bubble"], bubbleWrapMeters, "packaging")}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-400 text-[10px]">Panjang:</span>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              step="0.5"
+                              min="0.5"
+                              value={bubbleWrapMeters}
+                              onChange={(e) => setBubbleWrapMeters(Math.max(0.1, Number(e.target.value) || 1))}
+                              className="h-6 w-14 text-[11px] font-mono text-center p-1"
+                            />
+                            <span className="text-[10px] text-zinc-400">meter</span>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1036,23 +1167,32 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                       </span>
                     </label>
                     {deductHoneycomb && (
-                      <div className="flex items-center justify-between gap-1 text-[11px]">
-                        <Input
-                          type="number"
-                          step="any"
-                          min="1"
-                          value={honeycombLength}
-                          onChange={(e) => setHoneycombLength(Math.max(1, Number(e.target.value) || 1))}
-                          className="h-6 w-14 text-[11px] font-mono text-center p-1"
-                        />
-                        <select
-                          value={honeycombUnit}
-                          onChange={(e) => setHoneycombUnit(e.target.value as "cm" | "meter")}
-                          className="h-6 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-1 text-[10px]"
-                        >
-                          <option value="cm">cm</option>
-                          <option value="meter">meter</option>
-                        </select>
+                      <div className="space-y-1.5">
+                        {renderMaterialSelect(
+                          selectedHoneycombId,
+                          setSelectedHoneycombId,
+                          ["honeycomb"],
+                          honeycombUnit === "cm" ? Number((honeycombLength / 100).toFixed(2)) : honeycombLength,
+                          "packaging"
+                        )}
+                        <div className="flex items-center justify-between gap-1 text-[11px]">
+                          <Input
+                            type="number"
+                            step="any"
+                            min="1"
+                            value={honeycombLength}
+                            onChange={(e) => setHoneycombLength(Math.max(1, Number(e.target.value) || 1))}
+                            className="h-6 w-14 text-[11px] font-mono text-center p-1"
+                          />
+                          <select
+                            value={honeycombUnit}
+                            onChange={(e) => setHoneycombUnit(e.target.value as "cm" | "meter")}
+                            className="h-6 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-1 text-[10px]"
+                          >
+                            <option value="cm">cm</option>
+                            <option value="meter">meter</option>
+                          </select>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1071,18 +1211,21 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                       </span>
                     </label>
                     {deductTape && (
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-400 text-[10px]">Estimasi:</span>
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="number"
-                            step="0.5"
-                            min="0.5"
-                            value={tapeLength}
-                            onChange={(e) => setTapeLength(Math.max(0.1, Number(e.target.value) || 1))}
-                            className="h-6 w-14 text-[11px] font-mono text-center p-1"
-                          />
-                          <span className="text-[10px] text-zinc-400">meter</span>
+                      <div className="space-y-1.5">
+                        {renderMaterialSelect(selectedTapeId, setSelectedTapeId, ["isolasi", "lakban"], tapeLength, "packaging")}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-400 text-[10px]">Estimasi:</span>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              step="0.5"
+                              min="0.5"
+                              value={tapeLength}
+                              onChange={(e) => setTapeLength(Math.max(0.1, Number(e.target.value) || 1))}
+                              className="h-6 w-14 text-[11px] font-mono text-center p-1"
+                            />
+                            <span className="text-[10px] text-zinc-400">meter</span>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1102,23 +1245,107 @@ export function NewOrderClient({ products, materials = [] }: NewOrderClientProps
                       </span>
                     </label>
                     {deductGlue && (
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-400 text-[10px]">Estimasi:</span>
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="number"
-                            step="1"
-                            min="1"
-                            value={glueQty}
-                            onChange={(e) => setGlueQty(Math.max(1, Number(e.target.value) || 1))}
-                            className="h-6 w-14 text-[11px] font-mono text-center p-1"
-                          />
-                          <span className="text-[10px] text-zinc-400">pakai</span>
+                      <div className="space-y-1.5">
+                        {renderMaterialSelect(selectedGlueId, setSelectedGlueId, ["lem", "adhesive"], glueQty, "other")}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-400 text-[10px]">Estimasi:</span>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              step="1"
+                              min="1"
+                              value={glueQty}
+                              onChange={(e) => setGlueQty(Math.max(1, Number(e.target.value) || 1))}
+                              className="h-6 w-14 text-[11px] font-mono text-center p-1"
+                            />
+                            <span className="text-[10px] text-zinc-400">pakai</span>
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Tambahan Bahan Lain dari /inventory */}
+                {materials.length > 0 && (
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                        Bahan Tambahan Lain dari /inventory (Opsional)
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[11px]"
+                        onClick={() =>
+                          setExtraDeductions((prev) => [
+                            ...prev,
+                            { material_id: materials[0].id, quantity: 1 },
+                          ])
+                        }
+                      >
+                        + Tambah Bahan
+                      </Button>
+                    </div>
+
+                    {extraDeductions.map((extra, idx) => {
+                      const chosenMat = materials.find((m) => m.id === extra.material_id);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                        >
+                          <select
+                            value={extra.material_id}
+                            onChange={(e) =>
+                              setExtraDeductions((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx ? { ...item, material_id: e.target.value } : item
+                                )
+                              )
+                            }
+                            className="flex-1 h-7 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2 text-[11px]"
+                          >
+                            {materials.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name} (Stok: {m.current_stock} {m.unit})
+                              </option>
+                            ))}
+                          </select>
+                          <Input
+                            type="number"
+                            min="0.1"
+                            step="any"
+                            value={extra.quantity}
+                            onChange={(e) =>
+                              setExtraDeductions((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx ? { ...item, quantity: Math.max(0, Number(e.target.value) || 0) } : item
+                                )
+                              )
+                            }
+                            className="h-7 w-20 text-xs font-mono text-center"
+                          />
+                          <span className="text-[10px] text-zinc-400 w-10">
+                            {chosenMat?.unit || "pcs"}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-red-500 hover:text-red-600"
+                            onClick={() =>
+                              setExtraDeductions((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                          >
+                            Hapus
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
