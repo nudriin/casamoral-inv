@@ -1,6 +1,6 @@
 import { INITIAL_EXPENSES, STORE_EXPENSES, ALL_EXPENSES, INITIAL_EXPENSE_CATEGORIES } from "@/lib/data/initial-data";
 import { Expense, ExpenseCategory, PaymentMethod } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient, isValidUuid } from "@/lib/supabase/db";
 import { getEnvStatus } from "@/lib/env";
 import Decimal from "decimal.js";
 
@@ -42,7 +42,7 @@ export async function getExpenseCategories(): Promise<ExpenseCategory[]> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       const { data, error } = await supabase.from("expense_categories").select("*").order("name");
       if (!error && data && data.length > 0) {
         return data as ExpenseCategory[];
@@ -63,7 +63,7 @@ export async function getExpenses(filters?: ExpenseFilters): Promise<Expense[]> 
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       let query = supabase
         .from("expenses")
         .select(`*, category:expense_categories(*)`)
@@ -130,13 +130,39 @@ export async function createExpense(payload: CreateExpensePayload): Promise<Expe
     throw new Error("Deskripsi pengeluaran wajib diisi.");
   }
 
-  const category = memoryCategories.find((c) => c.id === payload.category_id);
   const nowIso = new Date().toISOString();
-  const expenseId = `exp-${Date.now()}`;
+  const expenseId = crypto.randomUUID();
+  const expenseDate = payload.expense_date || nowIso.slice(0, 10);
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert({
+        id: expenseId,
+        expense_date: expenseDate,
+        category_id: payload.category_id,
+        description: payload.description.trim(),
+        amount: amountDec.toNumber(),
+        payment_method: payload.payment_method,
+        is_capital_expenditure: payload.is_capital_expenditure || false,
+        notes: payload.notes || null,
+      })
+      .select(`*, category:expense_categories(*)`)
+      .single();
+
+    if (error) {
+      throw new Error(`Gagal menyimpan pengeluaran ke database: ${error.message}`);
+    }
+    return data as Expense;
+  }
+
+  const category = memoryCategories.find((c) => c.id === payload.category_id);
 
   const newExpense: Expense = {
     id: expenseId,
-    expense_date: payload.expense_date || nowIso.slice(0, 10),
+    expense_date: expenseDate,
     category_id: payload.category_id,
     description: payload.description.trim(),
     amount: amountDec.toNumber(),
@@ -148,26 +174,6 @@ export async function createExpense(payload: CreateExpensePayload): Promise<Expe
   };
 
   memoryExpenses.unshift(newExpense);
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("expenses").insert({
-        id: newExpense.id,
-        expense_date: newExpense.expense_date,
-        category_id: newExpense.category_id,
-        description: newExpense.description,
-        amount: newExpense.amount,
-        payment_method: newExpense.payment_method,
-        is_capital_expenditure: newExpense.is_capital_expenditure,
-        notes: newExpense.notes,
-      });
-    } catch {
-      // Fallback
-    }
-  }
-
   return newExpense;
 }
 
@@ -211,21 +217,23 @@ export async function getExpensesSummary(): Promise<ExpensesSummary> {
  */
 export async function createExpenseCategory(category: { name: string; is_fixed_cost?: boolean; description?: string }): Promise<ExpenseCategory> {
   const { isConfigured } = getEnvStatus();
+  const catId = crypto.randomUUID();
 
   if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      const { data, error } = await supabase.from("expense_categories").insert([category]).select().single();
-      if (!error && data) {
-        return data as ExpenseCategory;
-      }
-    } catch {
-      // Fallback
+    const supabase = await getServiceSupabaseClient();
+    const { data, error } = await supabase
+      .from("expense_categories")
+      .insert([{ id: catId, name: category.name, is_fixed_cost: category.is_fixed_cost ?? true }])
+      .select()
+      .single();
+    if (error) {
+      throw new Error(`Gagal membuat kategori pengeluaran di database: ${error.message}`);
     }
+    return data as ExpenseCategory;
   }
 
   const newCat: ExpenseCategory = {
-    id: `cat-${Date.now()}`,
+    id: catId,
     name: category.name,
     is_fixed_cost: category.is_fixed_cost ?? true,
     description: category.description || null,
@@ -241,14 +249,13 @@ export async function createExpenseCategory(category: { name: string; is_fixed_c
 export async function deleteExpense(id: string): Promise<boolean> {
   const { isConfigured } = getEnvStatus();
 
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      const { error } = await supabase.from("expenses").delete().eq("id", id);
-      if (!error) return true;
-    } catch {
-      // Fallback
+  if (isConfigured && isValidUuid(id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) {
+      throw new Error(`Gagal menghapus pengeluaran di database: ${error.message}`);
     }
+    return true;
   }
 
   const initialLen = memoryExpenses.length;

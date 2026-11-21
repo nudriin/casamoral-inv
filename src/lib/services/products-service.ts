@@ -1,6 +1,6 @@
 import { INITIAL_PRODUCTS, STORE_PRODUCTS, ALL_PRODUCTS, ProductWithBOM, BomPartItem, BomHardwareItem } from "@/lib/data/initial-data";
 import { Product, ProductCategory, ProductType, PricingSource, CalculationMode } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient, isValidUuid } from "@/lib/supabase/db";
 import { getEnvStatus } from "@/lib/env";
 import Decimal from "decimal.js";
 
@@ -65,7 +65,7 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       const { data, error } = await supabase
         .from("product_categories")
         .select("*")
@@ -98,31 +98,27 @@ export async function createProductCategory(name: string): Promise<ProductCatego
     return existing;
   }
 
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { data, error } = await supabase
+      .from("product_categories")
+      .upsert({ id: crypto.randomUUID(), name: cleanName }, { onConflict: "name" })
+      .select()
+      .single();
+    if (error) {
+      throw new Error(`Gagal menyimpan kategori produk ke database: ${error.message}`);
+    }
+    return data as ProductCategory;
+  }
+
   const newCat: ProductCategory = {
-    id: `cat-${Date.now()}`,
+    id: crypto.randomUUID(),
     name: cleanName,
     created_at: new Date().toISOString(),
   };
 
   memoryCategories.push(newCat);
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      const { data } = await supabase
-        .from("product_categories")
-        .upsert({ name: cleanName }, { onConflict: "name" })
-        .select()
-        .single();
-      if (data) {
-        newCat.id = data.id;
-      }
-    } catch {
-      // Fallback
-    }
-  }
-
   return newCat;
 }
 
@@ -134,7 +130,7 @@ export async function getProducts(includeArchived = false): Promise<ProductWithB
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       let query = supabase
         .from("products")
         .select(`
@@ -203,7 +199,7 @@ export async function createProduct(payload: CreateProductPayload): Promise<Prod
   }
 
   const nowIso = new Date().toISOString();
-  const id = `prod-${Date.now()}`;
+  const id = crypto.randomUUID();
   const sku = payload.sku ? payload.sku.trim() : `CM-${Date.now().toString().slice(-6)}`;
 
   // Calculate HPP and recommended price using Decimal.js
@@ -291,38 +287,37 @@ export async function createProduct(payload: CreateProductPayload): Promise<Prod
     },
   };
 
-  memoryProducts.unshift(newProduct);
-
   const { isConfigured } = getEnvStatus();
   if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("products").insert({
-        id: newProduct.id,
-        sku: newProduct.sku,
-        name: newProduct.name,
-        category_id: newProduct.category_id,
-        parent_id: newProduct.parent_id,
-        product_type: newProduct.product_type,
-        description: newProduct.description,
-        dimensions: newProduct.dimensions,
-        color_variants: newProduct.color_variants,
-        pricing_source: newProduct.pricing_source,
-        calculation_mode: newProduct.calculation_mode,
-        standard_overhead_multiplier: newProduct.standard_overhead_multiplier,
-        print_time_minutes: newProduct.print_time_minutes,
-        current_hpp: newProduct.current_hpp,
-        recommended_price: newProduct.recommended_price,
-        selling_price: newProduct.selling_price,
-        markup_percent: newProduct.markup_percent,
-        is_active: newProduct.is_active,
-        is_archived: false,
-      });
-    } catch {
-      // Fallback
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("products").insert({
+      id: newProduct.id,
+      sku: newProduct.sku,
+      name: newProduct.name,
+      category_id: isValidUuid(newProduct.category_id) ? newProduct.category_id : null,
+      parent_id: isValidUuid(newProduct.parent_id) ? newProduct.parent_id : null,
+      product_type: newProduct.product_type,
+      description: newProduct.description,
+      dimensions: newProduct.dimensions,
+      color_variants: newProduct.color_variants,
+      pricing_source: newProduct.pricing_source,
+      calculation_mode: newProduct.calculation_mode,
+      standard_overhead_multiplier: newProduct.standard_overhead_multiplier,
+      print_time_minutes: newProduct.print_time_minutes,
+      current_hpp: newProduct.current_hpp,
+      recommended_price: newProduct.recommended_price,
+      selling_price: newProduct.selling_price,
+      markup_percent: newProduct.markup_percent,
+      is_active: newProduct.is_active,
+      is_archived: false,
+    });
+    if (error) {
+      throw new Error(`Gagal menyimpan produk ke database: ${error.message}`);
     }
+    return newProduct;
   }
 
+  memoryProducts.unshift(newProduct);
   return newProduct;
 }
 
@@ -333,12 +328,18 @@ export async function updateProduct(
   id: string,
   payload: UpdateProductPayload
 ): Promise<ProductWithBOM> {
+  const { isConfigured } = getEnvStatus();
   const productIndex = memoryProducts.findIndex((p) => p.id === id);
-  if (productIndex === -1) {
+  const existing =
+    productIndex !== -1
+      ? memoryProducts[productIndex]
+      : isConfigured
+      ? await getProductById(id)
+      : null;
+
+  if (!existing) {
     throw new Error(`Produk dengan ID ${id} tidak ditemukan.`);
   }
-
-  const existing = memoryProducts[productIndex];
   const nowIso = new Date().toISOString();
 
   // Recalculate HPP if BOM or pricing fields updated
@@ -428,38 +429,38 @@ export async function updateProduct(
     bom,
   };
 
-  memoryProducts[productIndex] = updatedProduct;
+  if (productIndex !== -1) {
+    memoryProducts[productIndex] = updatedProduct;
+  }
 
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase
-        .from("products")
-        .update({
-          name: updatedProduct.name,
-          sku: updatedProduct.sku,
-          category_id: updatedProduct.category_id,
-          parent_id: updatedProduct.parent_id,
-          product_type: updatedProduct.product_type,
-          description: updatedProduct.description,
-          dimensions: updatedProduct.dimensions,
-          color_variants: updatedProduct.color_variants,
-          pricing_source: updatedProduct.pricing_source,
-          calculation_mode: updatedProduct.calculation_mode,
-          standard_overhead_multiplier: updatedProduct.standard_overhead_multiplier,
-          print_time_minutes: updatedProduct.print_time_minutes,
-          current_hpp: updatedProduct.current_hpp,
-          recommended_price: updatedProduct.recommended_price,
-          selling_price: updatedProduct.selling_price,
-          markup_percent: updatedProduct.markup_percent,
-          is_active: updatedProduct.is_active,
-          is_archived: updatedProduct.is_archived,
-          updated_at: nowIso,
-        })
-        .eq("id", id);
-    } catch {
-      // Fallback
+  if (isConfigured && isValidUuid(id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: updatedProduct.name,
+        sku: updatedProduct.sku,
+        category_id: isValidUuid(updatedProduct.category_id) ? updatedProduct.category_id : null,
+        parent_id: isValidUuid(updatedProduct.parent_id) ? updatedProduct.parent_id : null,
+        product_type: updatedProduct.product_type,
+        description: updatedProduct.description,
+        dimensions: updatedProduct.dimensions,
+        color_variants: updatedProduct.color_variants,
+        pricing_source: updatedProduct.pricing_source,
+        calculation_mode: updatedProduct.calculation_mode,
+        standard_overhead_multiplier: updatedProduct.standard_overhead_multiplier,
+        print_time_minutes: updatedProduct.print_time_minutes,
+        current_hpp: updatedProduct.current_hpp,
+        recommended_price: updatedProduct.recommended_price,
+        selling_price: updatedProduct.selling_price,
+        markup_percent: updatedProduct.markup_percent,
+        is_active: updatedProduct.is_active,
+        is_archived: updatedProduct.is_archived,
+        updated_at: nowIso,
+      })
+      .eq("id", id);
+    if (error) {
+      throw new Error(`Gagal memperbarui produk di database: ${error.message}`);
     }
   }
 
@@ -470,7 +471,8 @@ export async function updateProduct(
  * Delete product or safely archive if referenced by historical orders
  */
 export async function deleteOrArchiveProduct(id: string): Promise<{ action: "DELETED" | "ARCHIVED"; message: string }> {
-  const product = memoryProducts.find((p) => p.id === id);
+  const { isConfigured } = getEnvStatus();
+  const product = memoryProducts.find((p) => p.id === id) || (isConfigured ? await getProductById(id) : null);
   if (!product) {
     throw new Error(`Produk dengan ID ${id} tidak ditemukan.`);
   }
@@ -487,16 +489,14 @@ export async function deleteOrArchiveProduct(id: string): Promise<{ action: "DEL
     product.is_active = false;
     product.updated_at = new Date().toISOString();
 
-    const { isConfigured } = getEnvStatus();
-    if (isConfigured) {
-      try {
-        const supabase = await createServerSupabaseClient();
-        await supabase
-          .from("products")
-          .update({ is_archived: true, is_active: false })
-          .eq("id", id);
-      } catch {
-        // Fallback
+    if (isConfigured && isValidUuid(id)) {
+      const supabase = await getServiceSupabaseClient();
+      const { error } = await supabase
+        .from("products")
+        .update({ is_archived: true, is_active: false })
+        .eq("id", id);
+      if (error) {
+        throw new Error(`Gagal mengarsipkan produk di database: ${error.message}`);
       }
     }
 
@@ -507,17 +507,19 @@ export async function deleteOrArchiveProduct(id: string): Promise<{ action: "DEL
   }
 
   // If not referenced, permanently remove
-  memoryProducts = memoryProducts.filter((p) => p.id !== id);
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("products").delete().eq("id", id);
-    } catch {
-      // Fallback
+  if (isConfigured && isValidUuid(id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (error) {
+      throw new Error(`Gagal menghapus produk di database: ${error.message}`);
     }
+    return {
+      action: "DELETED",
+      message: `Produk "${product.name}" berhasil dihapus secara permanen.`,
+    };
   }
+
+  memoryProducts = memoryProducts.filter((p) => p.id !== id);
 
   return {
     action: "DELETED",

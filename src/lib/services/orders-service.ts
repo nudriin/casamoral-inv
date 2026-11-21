@@ -7,7 +7,8 @@ import {
   ALL_PRODUCTS,
 } from "@/lib/data/initial-data";
 import { Order, OrderItem, OrderStatus, PaymentStatus, ChannelSource, Customer } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient, isValidUuid } from "@/lib/supabase/db";
+import { getProducts } from "./products-service";
 import { getEnvStatus } from "@/lib/env";
 import { calculatePlatformFee } from "@/lib/financial/platform-fees";
 import Decimal from "decimal.js";
@@ -113,7 +114,7 @@ export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       let query = supabase
         .from("orders")
         .select(`
@@ -138,7 +139,30 @@ export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
 
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        return (data as Order[]).map((o) => populateOrderProducts(o));
+        const dbOrders = (data as Order[]).map((o) => populateOrderProducts(o));
+        const dbNumbers = new Set(dbOrders.map((o) => o.order_number));
+        let remainingInitial = memoryOrders.filter((o) => !dbNumbers.has(o.order_number));
+        if (filters?.channel && filters.channel !== "ALL") {
+          remainingInitial = remainingInitial.filter((o) => o.channel.toLowerCase() === filters.channel?.toLowerCase());
+        }
+        if (filters?.status) {
+          remainingInitial = remainingInitial.filter((o) => o.status === filters.status);
+        }
+        if (filters?.paymentStatus) {
+          remainingInitial = remainingInitial.filter((o) => o.payment_status === filters.paymentStatus);
+        }
+        if (filters?.search) {
+          const q = filters.search.toLowerCase();
+          remainingInitial = remainingInitial.filter(
+            (o) =>
+              o.order_number.toLowerCase().includes(q) ||
+              o.customer?.name.toLowerCase().includes(q) ||
+              o.notes?.toLowerCase().includes(q)
+          );
+        }
+        return [...dbOrders, ...remainingInitial.map((o) => populateOrderProducts(o))].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       }
     } catch {
       // Fallback to local memory store
@@ -213,7 +237,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       const { data, error } = await supabase
         .from("orders")
         .select(`
@@ -250,38 +274,77 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
     throw new Error("Nama pelanggan wajib diisi.");
   }
 
-  // Find or create customer
-  let customer: Customer | undefined = memoryCustomers.find(
-    (c) => c.name.toLowerCase() === payload.customer_name.trim().toLowerCase()
-  );
-
+  const { isConfigured } = getEnvStatus();
   const nowIso = payload.order_date || new Date().toISOString();
   const channelSource: ChannelSource = payload.channel || payload.sales_channel || "WhatsApp";
+  const trimmedCustomerName = payload.customer_name.trim();
 
-  if (!customer) {
-    customer = {
-      id: `cust-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      name: payload.customer_name.trim(),
-      city: payload.customer_city?.trim() || null,
-      phone: payload.customer_phone?.trim() || null,
-      channel_source: channelSource,
-      created_at: nowIso,
-      updated_at: nowIso,
-    };
-    memoryCustomers.push(customer);
+  // Find or create customer
+  let customer: Customer | undefined;
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { data: existingCust } = await supabase
+      .from("customers")
+      .select("*")
+      .ilike("name", trimmedCustomerName)
+      .limit(1)
+      .maybeSingle();
+    if (existingCust) {
+      customer = existingCust as Customer;
+    } else {
+      const newCustId = crypto.randomUUID();
+      const { data: createdCust, error: custError } = await supabase
+        .from("customers")
+        .insert({
+          id: newCustId,
+          name: trimmedCustomerName,
+          city: payload.customer_city?.trim() || null,
+          phone: payload.customer_phone?.trim() || null,
+          channel_source: channelSource,
+        })
+        .select()
+        .single();
+      if (custError) {
+        throw new Error(`Gagal menyimpan data pelanggan ke database: ${custError.message}`);
+      }
+      customer = createdCust as Customer;
+    }
+  } else {
+    customer = memoryCustomers.find(
+      (c) => c.name.toLowerCase() === trimmedCustomerName.toLowerCase()
+    );
+    if (!customer) {
+      customer = {
+        id: crypto.randomUUID(),
+        name: trimmedCustomerName,
+        city: payload.customer_city?.trim() || null,
+        phone: payload.customer_phone?.trim() || null,
+        channel_source: channelSource,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      memoryCustomers.push(customer);
+    }
   }
 
   // Generate unique order number: ORD-YYYYMMDD-XXXX
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const orderNumber = `ORD-${dateStr}-${(memoryOrders.length + 1).toString().padStart(3, "0")}`;
-  const orderId = `ord-${Date.now()}`;
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  const orderNumber = isConfigured
+    ? `ORD-${dateStr}-${randomSuffix}`
+    : `ORD-${dateStr}-${(memoryOrders.length + 1).toString().padStart(3, "0")}`;
+  const orderId = crypto.randomUUID();
 
   // Process items and snapshot HPP & unit price
   let subtotalAmount = new Decimal(0);
   let addOnAmount = new Decimal(0);
+  const catalogProducts = isConfigured ? await getProducts(true) : ALL_PRODUCTS;
 
-  const orderItems: OrderItem[] = payload.items.map((item, index) => {
-    const product = ALL_PRODUCTS.find((p) => p.id === item.product_id) || INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
+  const orderItems: OrderItem[] = payload.items.map((item) => {
+    const product =
+      catalogProducts.find((p) => p.id === item.product_id) ||
+      ALL_PRODUCTS.find((p) => p.id === item.product_id) ||
+      INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
     if (!product) {
       throw new Error(`Produk dengan ID ${item.product_id} tidak ditemukan.`);
     }
@@ -299,7 +362,7 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
     addOnAmount = addOnAmount.plus(itemAddonTotal);
 
     return {
-      id: `item-${Date.now()}-${index}`,
+      id: crypto.randomUUID(),
       order_id: orderId,
       product_id: product.id,
       quantity: item.quantity,
@@ -364,8 +427,49 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
     items: orderItems,
   };
 
-  // Persist to local memory store
-  memoryOrders.unshift(newOrder);
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { error: ordError } = await supabase.from("orders").insert({
+      id: newOrder.id,
+      order_number: newOrder.order_number,
+      order_date: newOrder.order_date,
+      customer_id: isValidUuid(newOrder.customer_id) ? newOrder.customer_id : null,
+      channel: newOrder.channel,
+      status: newOrder.status,
+      subtotal_amount: newOrder.subtotal_amount,
+      add_on_amount: newOrder.add_on_amount,
+      discount_amount: newOrder.discount_amount,
+      shipping_cost: newOrder.shipping_cost,
+      platform_fee: newOrder.platform_fee,
+      total_amount: newOrder.total_amount,
+      payment_status: newOrder.payment_status,
+      paid_amount: newOrder.paid_amount,
+      notes: newOrder.notes,
+    });
+    if (ordError) {
+      throw new Error(`Gagal menyimpan pesanan ke database: ${ordError.message}`);
+    }
+
+    for (const item of orderItems) {
+      const { error: itemError } = await supabase.from("order_items").insert({
+        id: item.id,
+        order_id: item.order_id,
+        product_id: isValidUuid(item.product_id) ? item.product_id : null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        unit_hpp: item.unit_hpp,
+        color_details: item.color_details,
+        add_on_name: item.add_on_name,
+        add_on_price: item.add_on_price,
+        subtotal: item.subtotal,
+      });
+      if (itemError) {
+        throw new Error(`Gagal menyimpan item pesanan ke database: ${itemError.message}`);
+      }
+    }
+  } else {
+    memoryOrders.unshift(newOrder);
+  }
 
   // Deduct custom checkout materials (filament, lamp, cables, packaging, honeycomb, bubble wrap, etc.)
   if (payload.checkout_deductions && payload.checkout_deductions.length > 0) {
@@ -376,48 +480,6 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
     await deductBOMStockForOrder(newOrder);
   }
 
-  // If Supabase is configured, also push to DB
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("orders").insert({
-        id: newOrder.id,
-        order_number: newOrder.order_number,
-        order_date: newOrder.order_date,
-        customer_id: newOrder.customer_id,
-        channel: newOrder.channel,
-        status: newOrder.status,
-        subtotal_amount: newOrder.subtotal_amount,
-        add_on_amount: newOrder.add_on_amount,
-        discount_amount: newOrder.discount_amount,
-        shipping_cost: newOrder.shipping_cost,
-        platform_fee: newOrder.platform_fee,
-        total_amount: newOrder.total_amount,
-        payment_status: newOrder.payment_status,
-        paid_amount: newOrder.paid_amount,
-        notes: newOrder.notes,
-      });
-
-      for (const item of orderItems) {
-        await supabase.from("order_items").insert({
-          id: item.id,
-          order_id: item.order_id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          unit_hpp: item.unit_hpp,
-          color_details: item.color_details,
-          add_on_name: item.add_on_name,
-          add_on_price: item.add_on_price,
-          subtotal: item.subtotal,
-        });
-      }
-    } catch {
-      // Log or handle gracefully
-    }
-  }
-
   return newOrder;
 }
 
@@ -425,7 +487,8 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
  * Update order production/fulfillment status with strict state machine validation
  */
 export async function updateOrderStatus(orderId: string, newStatus: OrderStatus): Promise<Order> {
-  const order = memoryOrders.find((o) => o.id === orderId || o.order_number === orderId);
+  const { isConfigured } = getEnvStatus();
+  const order = memoryOrders.find((o) => o.id === orderId || o.order_number === orderId) || (isConfigured ? await getOrderById(orderId) : null);
   if (!order) {
     throw new Error(`Pesanan dengan ID ${orderId} tidak ditemukan.`);
   }
@@ -448,16 +511,14 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     await restoreBOMStockForOrder(order);
   }
 
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase
-        .from("orders")
-        .update({ status: newStatus, updated_at: order.updated_at })
-        .eq("id", order.id);
-    } catch {
-      // Fallback
+  if (isConfigured && isValidUuid(order.id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: newStatus, updated_at: order.updated_at })
+      .eq("id", order.id);
+    if (error) {
+      throw new Error(`Gagal memperbarui status pesanan di database: ${error.message}`);
     }
   }
 
@@ -472,7 +533,8 @@ export async function updateOrderPayment(
   paymentStatus: PaymentStatus,
   paidAmount?: number
 ): Promise<Order> {
-  const order = memoryOrders.find((o) => o.id === orderId || o.order_number === orderId);
+  const { isConfigured } = getEnvStatus();
+  const order = memoryOrders.find((o) => o.id === orderId || o.order_number === orderId) || (isConfigured ? await getOrderById(orderId) : null);
   if (!order) {
     throw new Error(`Pesanan dengan ID ${orderId} tidak ditemukan.`);
   }
@@ -487,20 +549,18 @@ export async function updateOrderPayment(
   }
   order.updated_at = new Date().toISOString();
 
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase
-        .from("orders")
-        .update({
-          payment_status: order.payment_status,
-          paid_amount: order.paid_amount,
-          updated_at: order.updated_at,
-        })
-        .eq("id", order.id);
-    } catch {
-      // Fallback
+  if (isConfigured && isValidUuid(order.id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        payment_status: order.payment_status,
+        paid_amount: order.paid_amount,
+        updated_at: order.updated_at,
+      })
+      .eq("id", order.id);
+    if (error) {
+      throw new Error(`Gagal memperbarui status pembayaran pesanan di database: ${error.message}`);
     }
   }
 
@@ -511,7 +571,10 @@ export async function updateOrderPayment(
  * Edit/Update an entire order and its financial metrics comprehensively
  */
 export async function updateOrder(payload: UpdateOrderPayload): Promise<Order> {
-  const order = memoryOrders.find((o) => o.id === payload.order_id || o.order_number === payload.order_id);
+  const { isConfigured } = getEnvStatus();
+  const order =
+    memoryOrders.find((o) => o.id === payload.order_id || o.order_number === payload.order_id) ||
+    (isConfigured ? await getOrderById(payload.order_id) : null);
   if (!order) {
     throw new Error(`Pesanan dengan ID atau nomor "${payload.order_id}" tidak ditemukan.`);
   }
@@ -668,41 +731,43 @@ export async function updateOrder(payload: UpdateOrderPayload): Promise<Order> {
   order.updated_at = new Date().toISOString();
 
   // Sync to Supabase if configured
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase
-        .from("orders")
-        .update({
-          order_date: order.order_date,
-          channel: order.channel,
-          status: order.status,
-          subtotal_amount: order.subtotal_amount,
-          add_on_amount: order.add_on_amount,
-          discount_amount: order.discount_amount,
-          shipping_cost: order.shipping_cost,
-          platform_fee: order.platform_fee,
-          total_amount: order.total_amount,
-          payment_status: order.payment_status,
-          paid_amount: order.paid_amount,
-          notes: order.notes,
-          updated_at: order.updated_at,
-        })
-        .eq("id", order.id);
+  if (isConfigured && isValidUuid(order.id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error: ordUpdateError } = await supabase
+      .from("orders")
+      .update({
+        order_date: order.order_date,
+        channel: order.channel,
+        status: order.status,
+        subtotal_amount: order.subtotal_amount,
+        add_on_amount: order.add_on_amount,
+        discount_amount: order.discount_amount,
+        shipping_cost: order.shipping_cost,
+        platform_fee: order.platform_fee,
+        total_amount: order.total_amount,
+        payment_status: order.payment_status,
+        paid_amount: order.paid_amount,
+        notes: order.notes,
+        updated_at: order.updated_at,
+      })
+      .eq("id", order.id);
 
-      if (order.customer_id && order.customer) {
-        await supabase
-          .from("customers")
-          .update({
-            name: order.customer.name,
-            city: order.customer.city,
-            phone: order.customer.phone,
-          })
-          .eq("id", order.customer_id);
+    if (ordUpdateError) {
+      throw new Error(`Gagal memperbarui pesanan di database: ${ordUpdateError.message}`);
+    }
+
+    if (order.customer_id && isValidUuid(order.customer_id) && order.customer) {
+      const { error: custUpdateError } = await supabase
+        .from("customers")
+        .update({
+          name: order.customer.name,
+          city: order.customer.city,
+          phone: order.customer.phone,
+        })
+        .eq("id", order.customer_id);
+      if (custUpdateError) {
+        throw new Error(`Gagal memperbarui data pelanggan di database: ${custUpdateError.message}`);
       }
-    } catch {
-      // Fallback
     }
   }
 
@@ -798,36 +863,74 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
     throw new Error("Keranjang POS harus memiliki minimal 1 produk.");
   }
 
+  const { isConfigured } = getEnvStatus();
   const customerName = payload.customer_name?.trim() || "Pelanggan POS / Umum";
-  let customer = memoryCustomers.find(
-    (c) => c.name.toLowerCase() === customerName.toLowerCase()
-  );
-
   const nowIso = new Date().toISOString();
+  let customer: Customer | undefined;
 
-  if (!customer) {
-    customer = {
-      id: `cust-pos-${Date.now()}`,
-      name: customerName,
-      city: payload.customer_city?.trim() || null,
-      phone: payload.customer_phone?.trim() || null,
-      channel_source: payload.channel,
-      created_at: nowIso,
-      updated_at: nowIso,
-    };
-    memoryCustomers.push(customer);
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { data: existingCust } = await supabase
+      .from("customers")
+      .select("*")
+      .ilike("name", customerName)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingCust) {
+      customer = existingCust as Customer;
+    } else {
+      const { data: createdCust, error: custError } = await supabase
+        .from("customers")
+        .insert({
+          id: crypto.randomUUID(),
+          name: customerName,
+          city: payload.customer_city?.trim() || null,
+          phone: payload.customer_phone?.trim() || null,
+          channel_source: payload.channel,
+        })
+        .select()
+        .single();
+      if (custError) {
+        throw new Error(`Gagal menyimpan pelanggan POS ke database: ${custError.message}`);
+      }
+      customer = createdCust as Customer;
+    }
+  } else {
+    customer = memoryCustomers.find(
+      (c) => c.name.toLowerCase() === customerName.toLowerCase()
+    );
+    if (!customer) {
+      customer = {
+        id: crypto.randomUUID(),
+        name: customerName,
+        city: payload.customer_city?.trim() || null,
+        phone: payload.customer_phone?.trim() || null,
+        channel_source: payload.channel,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      memoryCustomers.push(customer);
+    }
   }
 
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const orderNumber = `POS-${dateStr}-${(memoryOrders.length + 1).toString().padStart(3, "0")}`;
-  const orderId = `pos-${Date.now()}`;
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  const orderNumber = isConfigured
+    ? `POS-${dateStr}-${randomSuffix}`
+    : `POS-${dateStr}-${(memoryOrders.length + 1).toString().padStart(3, "0")}`;
+  const orderId = crypto.randomUUID();
 
   let rawProductsSubtotal = new Decimal(0);
   let rawProductsHpp = new Decimal(0);
   let addOnAmount = new Decimal(0);
+  const catalogProducts = isConfigured ? await getProducts(true) : ALL_PRODUCTS;
 
-  const orderItems: OrderItem[] = payload.items.map((item, index) => {
-    const product = ALL_PRODUCTS.find((p) => p.id === item.product_id) || INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
+  const orderItems: OrderItem[] = payload.items.map((item) => {
+    const product =
+      catalogProducts.find((p) => p.id === item.product_id) ||
+      ALL_PRODUCTS.find((p) => p.id === item.product_id) ||
+      INITIAL_PRODUCTS.find((p) => p.id === item.product_id);
     const qty = new Decimal(item.quantity);
     const unitPrice = new Decimal(item.raw_unit_price);
     const unitHpp = new Decimal(item.raw_unit_hpp);
@@ -842,7 +945,7 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
     addOnAmount = addOnAmount.plus(itemAddonTotal);
 
     return {
-      id: `item-${Date.now()}-${index}`,
+      id: crypto.randomUUID(),
       order_id: orderId,
       product_id: item.product_id,
       quantity: item.quantity,
@@ -919,7 +1022,50 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
     items: orderItems,
   };
 
-  memoryOrders.unshift(newOrder);
+  // Push order & items to Supabase BEFORE recording payments/stock deductions (FK constraint)
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { error: ordError } = await supabase.from("orders").insert({
+      id: newOrder.id,
+      order_number: newOrder.order_number,
+      order_date: newOrder.order_date,
+      customer_id: isValidUuid(newOrder.customer_id) ? newOrder.customer_id : null,
+      channel: newOrder.channel,
+      status: newOrder.status,
+      subtotal_amount: newOrder.subtotal_amount,
+      add_on_amount: newOrder.add_on_amount,
+      discount_amount: newOrder.discount_amount,
+      shipping_cost: newOrder.shipping_cost,
+      platform_fee: newOrder.platform_fee,
+      total_amount: newOrder.total_amount,
+      payment_status: newOrder.payment_status,
+      paid_amount: newOrder.paid_amount,
+      notes: newOrder.notes,
+    });
+    if (ordError) {
+      throw new Error(`Gagal menyimpan transaksi POS ke database: ${ordError.message}`);
+    }
+
+    for (const item of orderItems) {
+      const { error: itemError } = await supabase.from("order_items").insert({
+        id: item.id,
+        order_id: item.order_id,
+        product_id: isValidUuid(item.product_id) ? item.product_id : null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        unit_hpp: item.unit_hpp,
+        color_details: item.color_details,
+        add_on_name: item.add_on_name,
+        add_on_price: item.add_on_price,
+        subtotal: item.subtotal,
+      });
+      if (itemError) {
+        throw new Error(`Gagal menyimpan item transaksi POS ke database: ${itemError.message}`);
+      }
+    }
+  } else {
+    memoryOrders.unshift(newOrder);
+  }
 
   // Automatic Inventory Deductions:
   // 1. Deduct selected packaging stock (e.g. Kardus, Bubble Wrap)
@@ -943,33 +1089,6 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
     });
   }
 
-  // Push to Supabase if configured
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("orders").insert({
-        id: newOrder.id,
-        order_number: newOrder.order_number,
-        order_date: newOrder.order_date,
-        customer_id: newOrder.customer_id,
-        channel: newOrder.channel,
-        status: newOrder.status,
-        subtotal_amount: newOrder.subtotal_amount,
-        add_on_amount: newOrder.add_on_amount,
-        discount_amount: newOrder.discount_amount,
-        shipping_cost: newOrder.shipping_cost,
-        platform_fee: newOrder.platform_fee,
-        total_amount: newOrder.total_amount,
-        payment_status: newOrder.payment_status,
-        paid_amount: newOrder.paid_amount,
-        notes: newOrder.notes,
-      });
-    } catch {
-      // Fallback
-    }
-  }
-
   return {
     order: newOrder,
     netProfit,
@@ -982,12 +1101,12 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
  * Delete an order permanently and ensure all related financial metrics and payments are cleaned up
  */
 export async function deleteOrder(orderId: string): Promise<{ id: string; order_number: string; deleted: boolean }> {
+  const { isConfigured } = getEnvStatus();
   const orderIndex = memoryOrders.findIndex((o) => o.id === orderId || o.order_number === orderId);
-  if (orderIndex === -1) {
+  const order = orderIndex !== -1 ? memoryOrders[orderIndex] : (isConfigured ? await getOrderById(orderId) : null);
+  if (!order) {
     throw new Error(`Pesanan dengan ID atau nomor "${orderId}" tidak ditemukan.`);
   }
-
-  const order = memoryOrders[orderIndex];
 
   // 1. Delete associated payments to preserve cash flow and receivables integrity
   const { deletePaymentsByOrderId } = await import("./payments-service");
@@ -998,23 +1117,26 @@ export async function deleteOrder(orderId: string): Promise<{ id: string; order_
   await restoreBOMStockForOrder(order);
 
   // 2. Delete from Supabase if configured
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      // Remove payments first due to ON DELETE RESTRICT
-      await supabase.from("payments").delete().eq("order_id", order.id);
-      // Remove order_items
-      await supabase.from("order_items").delete().eq("order_id", order.id);
-      // Remove order
-      await supabase.from("orders").delete().eq("id", order.id);
-    } catch {
-      // Fallback
+  if (isConfigured && isValidUuid(order.id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error: payDelErr } = await supabase.from("payments").delete().eq("order_id", order.id);
+    if (payDelErr) {
+      throw new Error(`Gagal menghapus pembayaran pesanan di database: ${payDelErr.message}`);
+    }
+    const { error: itemDelErr } = await supabase.from("order_items").delete().eq("order_id", order.id);
+    if (itemDelErr) {
+      throw new Error(`Gagal menghapus item pesanan di database: ${itemDelErr.message}`);
+    }
+    const { error: ordDelErr } = await supabase.from("orders").delete().eq("id", order.id);
+    if (ordDelErr) {
+      throw new Error(`Gagal menghapus pesanan di database: ${ordDelErr.message}`);
     }
   }
 
-  // 3. Remove order from in-memory array
-  memoryOrders.splice(orderIndex, 1);
+  // 3. Remove order from in-memory array if present
+  if (orderIndex !== -1) {
+    memoryOrders.splice(orderIndex, 1);
+  }
 
   return {
     id: order.id,

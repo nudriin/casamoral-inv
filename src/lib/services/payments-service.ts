@@ -1,6 +1,6 @@
 import { INITIAL_PAYMENTS, STORE_PAYMENTS, ALL_PAYMENTS } from "@/lib/data/initial-data";
 import { Payment, PaymentMethod, PaymentStatus, Order } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient, isValidUuid } from "@/lib/supabase/db";
 import { getEnvStatus } from "@/lib/env";
 import { getOrderById, updateOrderPayment } from "./orders-service";
 import Decimal from "decimal.js";
@@ -42,7 +42,7 @@ export async function getPayments(filters?: { order_id?: string; method?: Paymen
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       let query = supabase.from("payments").select("*").order("payment_date", { ascending: false });
 
       if (filters?.order_id) {
@@ -100,7 +100,7 @@ export async function createPayment(payload: CreatePaymentPayload): Promise<Paym
   }
 
   const nowIso = new Date().toISOString();
-  const paymentId = `pay-${Date.now()}`;
+  const paymentId = crypto.randomUUID();
 
   const payment: Payment = {
     id: paymentId,
@@ -114,31 +114,32 @@ export async function createPayment(payload: CreatePaymentPayload): Promise<Paym
     created_at: nowIso,
   };
 
+  // Push to Supabase if configured
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("payments").insert({
+      id: payment.id,
+      order_id: payment.order_id,
+      payment_date: payment.payment_date,
+      amount: payment.amount,
+      payment_method: payment.payment_method,
+      reference_number: payment.reference_number,
+      proof_url: payment.proof_url,
+      notes: payment.notes,
+    });
+    if (error) {
+      throw new Error(`Gagal menyimpan pembayaran ke database: ${error.message}`);
+    }
+    await updateOrderPayment(order.id, newPaymentStatus, newPaid.toNumber());
+    return payment;
+  }
+
   // Add to local memory store
   memoryPayments.unshift(payment);
 
   // Update order's paid amount and payment status
   await updateOrderPayment(order.id, newPaymentStatus, newPaid.toNumber());
-
-  // Push to Supabase if configured
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("payments").insert({
-        id: payment.id,
-        order_id: payment.order_id,
-        payment_date: payment.payment_date,
-        amount: payment.amount,
-        payment_method: payment.payment_method,
-        reference_number: payment.reference_number,
-        proof_url: payment.proof_url,
-        notes: payment.notes,
-      });
-    } catch {
-      // Fallback
-    }
-  }
 
   return payment;
 }
@@ -153,7 +154,7 @@ export async function getReceivablesSummary(): Promise<ReceivablesSummary> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       const { data, error } = await supabase
         .from("orders")
         .select(`*, customer:customers(*), items:order_items(*)`)
@@ -220,19 +221,19 @@ export async function getReceivablesSummary(): Promise<ReceivablesSummary> {
  * Delete all payments associated with an order (called during order deletion)
  */
 export async function deletePaymentsByOrderId(orderId: string): Promise<number> {
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured && isValidUuid(orderId)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("payments").delete().eq("order_id", orderId);
+    if (error) {
+      throw new Error(`Gagal menghapus pembayaran pesanan di database: ${error.message}`);
+    }
+    return 1;
+  }
+
   const initialLen = memoryPayments.length;
   memoryPayments = memoryPayments.filter((p) => p.order_id !== orderId);
   const deletedCount = initialLen - memoryPayments.length;
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("payments").delete().eq("order_id", orderId);
-    } catch {
-      // Fallback
-    }
-  }
 
   return deletedCount;
 }

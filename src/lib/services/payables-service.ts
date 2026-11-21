@@ -7,7 +7,7 @@ import {
   PaymentMethod,
 } from "@/types/database";
 import { INITIAL_ASSETS } from "@/lib/data/initial-data";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient, isValidUuid } from "@/lib/supabase/db";
 import { getEnvStatus } from "@/lib/env";
 import Decimal from "decimal.js";
 
@@ -135,7 +135,7 @@ export async function getPayables(): Promise<Payable[]> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       const { data, error } = await supabase
         .from("payables")
         .select(`
@@ -246,6 +246,88 @@ export async function getPayablesSummary(): Promise<PayablesSummary> {
 export async function recordInstallmentPayment(
   payload: RecordInstallmentPaymentPayload
 ): Promise<{ payable: Payable; installment: PayableInstallment }> {
+  const payAmountDec = new Decimal(payload.amount);
+  if (payAmountDec.lessThanOrEqualTo(0)) {
+    throw new Error("Nominal pembayaran harus lebih besar dari Rp 0.");
+  }
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured && isValidUuid(payload.installment_id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { data: instRow, error: instFetchError } = await supabase
+      .from("payable_installments")
+      .select("*")
+      .eq("id", payload.installment_id)
+      .single();
+
+    if (instFetchError || !instRow) {
+      throw new Error(`Jadwal angsuran ID "${payload.installment_id}" tidak ditemukan di database.`);
+    }
+
+    const { data: payRow, error: payFetchError } = await supabase
+      .from("payables")
+      .select(`*, installments:payable_installments(*)`)
+      .eq("id", instRow.payable_id)
+      .single();
+
+    if (payFetchError || !payRow) {
+      throw new Error(`Data utang induk tidak ditemukan di database.`);
+    }
+
+    const updatedPaidAmount = Number(instRow.paid_amount || 0) + payAmountDec.toNumber();
+    const updatedInstStatus: PayableInstallment["status"] =
+      updatedPaidAmount >= Number(instRow.amount) ? "PAID" : "UNPAID";
+
+    const { data: updatedInst, error: instUpdateError } = await supabase
+      .from("payable_installments")
+      .update({
+        paid_amount: updatedPaidAmount,
+        status: updatedInstStatus,
+        payment_date: payload.payment_date,
+        payment_method: payload.payment_method,
+        reference_number: payload.reference_number || null,
+        notes: payload.notes || instRow.notes,
+      })
+      .eq("id", instRow.id)
+      .select()
+      .single();
+
+    if (instUpdateError) {
+      throw new Error(`Gagal memperbarui angsuran di database: ${instUpdateError.message}`);
+    }
+
+    const newRemaining = Math.max(
+      0,
+      new Decimal(payRow.remaining_amount).minus(payAmountDec).toNumber()
+    );
+    const otherInsts = (payRow.installments || []).map((i: PayableInstallment) =>
+      i.id === instRow.id ? { ...i, status: updatedInstStatus } : i
+    );
+    const allInstPaid = otherInsts.every((i: PayableInstallment) => i.status === "PAID");
+    const newPayStatus: PayableStatus = allInstPaid ? "PAID" : "PARTIALLY_PAID";
+    const nowIso = new Date().toISOString();
+
+    const { data: updatedPay, error: payUpdateError } = await supabase
+      .from("payables")
+      .update({
+        remaining_amount: newRemaining,
+        status: newPayStatus,
+        updated_at: nowIso,
+      })
+      .eq("id", payRow.id)
+      .select(`*, installments:payable_installments(*), related_asset:assets(*)`)
+      .single();
+
+    if (payUpdateError) {
+      throw new Error(`Gagal memperbarui saldo utang di database: ${payUpdateError.message}`);
+    }
+
+    return {
+      payable: updatedPay as Payable,
+      installment: updatedInst as PayableInstallment,
+    };
+  }
+
   let targetPayable: Payable | undefined;
   let targetInstallment: PayableInstallment | undefined;
 
@@ -262,11 +344,6 @@ export async function recordInstallmentPayment(
 
   if (!targetPayable || !targetInstallment) {
     throw new Error(`Jadwal angsuran ID "${payload.installment_id}" tidak ditemukan.`);
-  }
-
-  const payAmountDec = new Decimal(payload.amount);
-  if (payAmountDec.lessThanOrEqualTo(0)) {
-    throw new Error("Nominal pembayaran harus lebih besar dari Rp 0.");
   }
 
   // Update installment
@@ -287,36 +364,6 @@ export async function recordInstallmentPayment(
 
   const allInstPaid = targetPayable.installments?.every((i) => i.status === "PAID");
   targetPayable.status = allInstPaid ? "PAID" : "PARTIALLY_PAID";
-
-  // Persist to Supabase if configured
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase
-        .from("payable_installments")
-        .update({
-          paid_amount: targetInstallment.paid_amount,
-          status: targetInstallment.status,
-          payment_date: targetInstallment.payment_date,
-          payment_method: targetInstallment.payment_method,
-          reference_number: targetInstallment.reference_number,
-          notes: targetInstallment.notes,
-        })
-        .eq("id", targetInstallment.id);
-
-      await supabase
-        .from("payables")
-        .update({
-          remaining_amount: targetPayable.remaining_amount,
-          status: targetPayable.status,
-          updated_at: targetPayable.updated_at,
-        })
-        .eq("id", targetPayable.id);
-    } catch {
-      // Fallback
-    }
-  }
 
   return { payable: targetPayable, installment: targetInstallment };
 }
@@ -341,7 +388,7 @@ export async function createPayable(payload: CreatePayablePayload): Promise<Paya
   const monthly = payload.monthly_installment || Math.ceil(totalDec.dividedBy(termMonths).toNumber());
 
   const nowIso = new Date().toISOString();
-  const payId = `pay-${Date.now()}`;
+  const payId = crypto.randomUUID();
 
   // Generate installments
   const installments: PayableInstallment[] = [];
@@ -352,7 +399,7 @@ export async function createPayable(payload: CreatePayablePayload): Promise<Paya
     dueDate.setMonth(dueDate.getMonth() + (i - 1));
 
     installments.push({
-      id: `inst-${Date.now()}-${i}`,
+      id: crypto.randomUUID(),
       payable_id: payId,
       installment_number: i,
       due_date: dueDate.toISOString().slice(0, 10),
@@ -385,35 +432,37 @@ export async function createPayable(payload: CreatePayablePayload): Promise<Paya
     installments,
   };
 
-  memoryPayables.unshift(newPayable);
-
   const { isConfigured } = getEnvStatus();
   if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("payables").insert({
-        id: newPayable.id,
-        title: newPayable.title,
-        payable_type: newPayable.payable_type,
-        creditor_name: newPayable.creditor_name,
-        related_asset_id: newPayable.related_asset_id,
-        total_amount: newPayable.total_amount,
-        remaining_amount: newPayable.remaining_amount,
-        monthly_installment: newPayable.monthly_installment,
-        term_months: newPayable.term_months,
-        start_date: newPayable.start_date,
-        status: newPayable.status,
-        notes: newPayable.notes,
-      });
+    const supabase = await getServiceSupabaseClient();
+    const { error: payError } = await supabase.from("payables").insert({
+      id: newPayable.id,
+      title: newPayable.title,
+      payable_type: newPayable.payable_type,
+      creditor_name: newPayable.creditor_name,
+      related_asset_id: isValidUuid(newPayable.related_asset_id) ? newPayable.related_asset_id : null,
+      total_amount: newPayable.total_amount,
+      remaining_amount: newPayable.remaining_amount,
+      monthly_installment: newPayable.monthly_installment,
+      term_months: newPayable.term_months,
+      start_date: newPayable.start_date,
+      status: newPayable.status,
+      notes: newPayable.notes,
+    });
 
-      for (const inst of installments) {
-        await supabase.from("payable_installments").insert(inst);
-      }
-    } catch {
-      // Fallback
+    if (payError) {
+      throw new Error(`Gagal menyimpan kewajiban utang ke database: ${payError.message}`);
     }
+
+    const { error: instError } = await supabase.from("payable_installments").insert(installments);
+    if (instError) {
+      throw new Error(`Gagal menyimpan jadwal angsuran ke database: ${instError.message}`);
+    }
+
+    return newPayable;
   }
 
+  memoryPayables.unshift(newPayable);
   return newPayable;
 }
 
@@ -421,22 +470,21 @@ export async function createPayable(payload: CreatePayablePayload): Promise<Paya
  * Delete a payable obligation
  */
 export async function deletePayable(id: string): Promise<boolean> {
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured && isValidUuid(id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("payables").delete().eq("id", id);
+    if (error) {
+      throw new Error(`Gagal menghapus kewajiban utang di database: ${error.message}`);
+    }
+    return true;
+  }
+
   const index = memoryPayables.findIndex((p) => p.id === id);
   if (index === -1) {
     throw new Error(`Utang dengan ID "${id}" tidak ditemukan.`);
   }
 
   memoryPayables.splice(index, 1);
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("payables").delete().eq("id", id);
-    } catch {
-      // Fallback
-    }
-  }
-
   return true;
 }

@@ -7,7 +7,7 @@ import {
   ALL_PRODUCTS,
 } from "@/lib/data/initial-data";
 import { Material, StockMovement, StockMovementType, Order } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient, isValidUuid } from "@/lib/supabase/db";
 import { getEnvStatus } from "@/lib/env";
 import Decimal from "decimal.js";
 
@@ -31,14 +31,19 @@ export async function getMaterials(): Promise<Material[]> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       const { data, error } = await supabase.from("materials").select("*").order("category");
 
       if (!error && data && data.length > 0) {
-        return data as Material[];
+        const dbMaterials = data as Material[];
+        const dbNames = new Set(dbMaterials.map((m) => m.name.toLowerCase().trim()));
+        const remainingInitial = memoryMaterials.filter(
+          (m) => !dbMaterials.some((d) => d.id === m.id) && !dbNames.has(m.name.toLowerCase().trim())
+        );
+        return [...dbMaterials, ...remainingInitial];
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.error("[materials-service] getMaterials exception:", err);
     }
   }
 
@@ -61,19 +66,25 @@ export async function getStockMovements(materialId?: string): Promise<StockMovem
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       let query = supabase.from("stock_movements").select("*").order("created_at", { ascending: false });
 
-      if (materialId) {
+      if (materialId && isValidUuid(materialId)) {
         query = query.eq("material_id", materialId);
       }
 
       const { data, error } = await query;
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
+        if (materialId && !isValidUuid(materialId)) {
+          return [];
+        }
         return data as StockMovement[];
       }
-    } catch {
-      // Fallback
+      if (error) {
+        console.error("[materials-service] getStockMovements error:", error.message);
+      }
+    } catch (err) {
+      console.error("[materials-service] getStockMovements exception:", err);
     }
   }
 
@@ -88,6 +99,105 @@ export async function getStockMovements(materialId?: string): Promise<StockMovem
  * Record a single stock movement and update current_stock
  */
 export async function recordStockMovement(payload: CreateStockMovementPayload): Promise<StockMovement> {
+  const { isConfigured } = getEnvStatus();
+  const nowIso = new Date().toISOString();
+  const movementId = crypto.randomUUID();
+
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    let dbMaterial: Material | null = null;
+
+    if (isValidUuid(payload.material_id)) {
+      const { data } = await supabase
+        .from("materials")
+        .select("*")
+        .eq("id", payload.material_id)
+        .maybeSingle();
+      if (data) dbMaterial = data as Material;
+    }
+
+    if (!dbMaterial) {
+      const memMatch = memoryMaterials.find((m) => m.id === payload.material_id);
+      if (memMatch) {
+        const { data: byName } = await supabase
+          .from("materials")
+          .select("*")
+          .ilike("name", memMatch.name)
+          .limit(1)
+          .maybeSingle();
+
+        if (byName) {
+          dbMaterial = byName as Material;
+        } else {
+          // Material came from initial-data fallback and hasn't been persisted to Supabase yet -> create it now
+          const { data: createdMat, error: createErr } = await supabase
+            .from("materials")
+            .insert({
+              id: crypto.randomUUID(),
+              name: memMatch.name,
+              category: memMatch.category,
+              unit: memMatch.unit,
+              current_stock: memMatch.current_stock,
+              min_stock_alert: memMatch.min_stock_alert,
+              cost_per_unit: memMatch.cost_per_unit,
+              supplier: memMatch.supplier,
+            })
+            .select()
+            .single();
+          if (createErr || !createdMat) {
+            throw new Error(`Gagal menyinkronkan bahan baku ke database: ${createErr?.message}`);
+          }
+          dbMaterial = createdMat as Material;
+        }
+      }
+    }
+
+    if (!dbMaterial) {
+      throw new Error(`Material dengan ID ${payload.material_id} tidak ditemukan di database.`);
+    }
+
+    const currentStockDec = new Decimal(dbMaterial.current_stock);
+    const updatedStockDec = currentStockDec.plus(new Decimal(payload.quantity));
+    const newStock = updatedStockDec.lessThan(0) ? 0 : updatedStockDec.toNumber();
+
+    const { error: updateError } = await supabase
+      .from("materials")
+      .update({ current_stock: newStock, updated_at: nowIso })
+      .eq("id", dbMaterial.id);
+
+    if (updateError) {
+      throw new Error(`Gagal memperbarui stok bahan di database: ${updateError.message}`);
+    }
+
+    // Keep in-memory copy in sync as well
+    const memIdx = memoryMaterials.findIndex(
+      (m) => m.id === payload.material_id || m.name.toLowerCase() === dbMaterial!.name.toLowerCase()
+    );
+    if (memIdx !== -1) {
+      memoryMaterials[memIdx].current_stock = newStock;
+      memoryMaterials[memIdx].updated_at = nowIso;
+    }
+
+    const { data: insertedMovement, error: insertError } = await supabase
+      .from("stock_movements")
+      .insert({
+        id: movementId,
+        material_id: dbMaterial.id,
+        movement_type: payload.movement_type,
+        quantity: payload.quantity,
+        reference_id: isValidUuid(payload.reference_id) ? payload.reference_id : null,
+        notes: payload.notes || null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      throw new Error(`Gagal mencatat mutasi stok ke database: ${insertError.message}`);
+    }
+
+    return insertedMovement as StockMovement;
+  }
+
   const material = memoryMaterials.find((m) => m.id === payload.material_id);
   if (!material) {
     throw new Error(`Material dengan ID ${payload.material_id} tidak ditemukan.`);
@@ -98,16 +208,13 @@ export async function recordStockMovement(payload: CreateStockMovementPayload): 
   const updatedStock = currentStockDec.plus(qtyDec);
 
   if (updatedStock.lessThan(0)) {
-    // We allow stock to go slightly negative or cap at 0 with warning, but in production we prevent negative if strict
-    // For realism, let's keep it non-negative
     material.current_stock = Math.max(0, updatedStock.toNumber());
   } else {
     material.current_stock = updatedStock.toNumber();
   }
 
-  const nowIso = new Date().toISOString();
   const movement: StockMovement = {
-    id: `mov-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    id: movementId,
     material_id: material.id,
     movement_type: payload.movement_type,
     quantity: payload.quantity,
@@ -117,25 +224,6 @@ export async function recordStockMovement(payload: CreateStockMovementPayload): 
   };
 
   memoryMovements.unshift(movement);
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("materials").update({ current_stock: material.current_stock }).eq("id", material.id);
-      await supabase.from("stock_movements").insert({
-        id: movement.id,
-        material_id: movement.material_id,
-        movement_type: movement.movement_type,
-        quantity: movement.quantity,
-        reference_id: movement.reference_id,
-        notes: movement.notes,
-      });
-    } catch {
-      // Fallback
-    }
-  }
-
   return movement;
 }
 
@@ -145,12 +233,36 @@ export async function recordStockMovement(payload: CreateStockMovementPayload): 
 export async function deductBOMStockForOrder(order: Order): Promise<StockMovement[]> {
   if (!order.items || order.items.length === 0) return [];
 
-  // Check if this order has already had production usage deducted to avoid duplicate deductions
-  const alreadyDeducted = memoryMovements.some(
-    (m) => m.reference_id === order.id && m.movement_type === "PRODUCTION_USAGE"
-  );
-  if (alreadyDeducted) {
-    return [];
+  const { isConfigured } = getEnvStatus();
+  const availableMaterials = await getMaterials();
+  const resolveMatId = (fallbackId: string, keywords: string[]): string | null => {
+    const exact = availableMaterials.find((m) => m.id === fallbackId);
+    if (exact) return exact.id;
+    const byKeyword = availableMaterials.find((m) =>
+      keywords.some((kw) => m.name.toLowerCase().includes(kw.toLowerCase()))
+    );
+    return byKeyword ? byKeyword.id : (isConfigured ? null : fallbackId);
+  };
+
+  if (isConfigured && isValidUuid(order.id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { data: existingMovs } = await supabase
+      .from("stock_movements")
+      .select("id")
+      .eq("reference_id", order.id)
+      .eq("movement_type", "PRODUCTION_USAGE")
+      .limit(1);
+    if (existingMovs && existingMovs.length > 0) {
+      return [];
+    }
+  } else {
+    // Check if this order has already had production usage deducted to avoid duplicate deductions
+    const alreadyDeducted = memoryMovements.some(
+      (m) => m.reference_id === order.id && m.movement_type === "PRODUCTION_USAGE"
+    );
+    if (alreadyDeducted) {
+      return [];
+    }
   }
 
   const generatedMovements: StockMovement[] = [];
@@ -163,9 +275,10 @@ export async function deductBOMStockForOrder(order: Order): Promise<StockMovemen
 
     // 1. Filament deduction (grams)
     const filamentGrams = new Decimal(product.bom.totalFilamentGram).times(qty).toNumber();
-    if (filamentGrams > 0) {
+    const matFilament = resolveMatId("mat-01", ["filamen", "pla", "petg"]);
+    if (filamentGrams > 0 && matFilament) {
       const mov = await recordStockMovement({
-        material_id: "mat-01",
+        material_id: matFilament,
         movement_type: "PRODUCTION_USAGE",
         quantity: -filamentGrams,
         reference_id: order.id,
@@ -175,87 +288,111 @@ export async function deductBOMStockForOrder(order: Order): Promise<StockMovemen
     }
 
     // 2. LED Bulb Inlite 3W (1 pcs per unit)
-    const bulbMov = await recordStockMovement({
-      material_id: "mat-02",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -qty,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Bohlam Inlite 3W`,
-    });
-    generatedMovements.push(bulbMov);
+    const matBulb = resolveMatId("mat-02", ["inlite", "bohlam", "led"]);
+    if (matBulb) {
+      const bulbMov = await recordStockMovement({
+        material_id: matBulb,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -qty,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Bohlam Inlite 3W`,
+      });
+      generatedMovements.push(bulbMov);
+    }
 
     // 3. Fitting E27 (1 pcs per unit)
-    const fittingMov = await recordStockMovement({
-      material_id: "mat-03",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -qty,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Fitting E27`,
-    });
-    generatedMovements.push(fittingMov);
+    const matFitting = resolveMatId("mat-03", ["fitting"]);
+    if (matFitting) {
+      const fittingMov = await recordStockMovement({
+        material_id: matFitting,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -qty,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Fitting E27`,
+      });
+      generatedMovements.push(fittingMov);
+    }
 
     // 4. Kabel Sakelar On/Off (1 pcs per unit)
-    const switchMov = await recordStockMovement({
-      material_id: "mat-04",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -qty,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Kabel Sakelar`,
-    });
-    generatedMovements.push(switchMov);
+    const matSwitch = resolveMatId("mat-04", ["sakelar", "kabel"]);
+    if (matSwitch) {
+      const switchMov = await recordStockMovement({
+        material_id: matSwitch,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -qty,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Kabel Sakelar`,
+      });
+      generatedMovements.push(switchMov);
+    }
 
     // 5. Karet Pelindung Kabel (1 pcs per unit)
-    const protectorMov = await recordStockMovement({
-      material_id: "mat-05",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -qty,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Pelindung Kabel`,
-    });
-    generatedMovements.push(protectorMov);
+    const matProtector = resolveMatId("mat-05", ["pelindung"]);
+    if (matProtector) {
+      const protectorMov = await recordStockMovement({
+        material_id: matProtector,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -qty,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Pelindung Kabel`,
+      });
+      generatedMovements.push(protectorMov);
+    }
 
     // 6. Kardus Kemasan Karton (1 pcs per unit)
-    const boxMov = await recordStockMovement({
-      material_id: "mat-06",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -qty,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Kardus Kemasan`,
-    });
-    generatedMovements.push(boxMov);
+    const matBox = resolveMatId("mat-06", ["kardus", "karton"]);
+    if (matBox) {
+      const boxMov = await recordStockMovement({
+        material_id: matBox,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -qty,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${qty} pcs Kardus Kemasan`,
+      });
+      generatedMovements.push(boxMov);
+    }
 
     // 7. Bubble Wrap Roll (240 cm = 2.4 meter per unit pesanan real)
     const bubbleMeters = new Decimal(2.4).times(qty).toNumber();
-    const bubbleMov = await recordStockMovement({
-      material_id: "mat-07",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -bubbleMeters,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${bubbleMeters} m (${240 * qty} cm) Bubble Wrap`,
-    });
-    generatedMovements.push(bubbleMov);
+    const matBubble = resolveMatId("mat-07", ["bubble"]);
+    if (matBubble) {
+      const bubbleMov = await recordStockMovement({
+        material_id: matBubble,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -bubbleMeters,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${bubbleMeters} m (${240 * qty} cm) Bubble Wrap`,
+      });
+      generatedMovements.push(bubbleMov);
+    }
 
     // 8. Kertas Packing Honeycomb (160 cm = 1.6 meter per unit pesanan real)
     const honeycombMeters = new Decimal(1.6).times(qty).toNumber();
-    const honeycombMov = await recordStockMovement({
-      material_id: "mat-08",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -honeycombMeters,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${honeycombMeters} m (${160 * qty} cm) Kertas Honeycomb`,
-    });
-    generatedMovements.push(honeycombMov);
+    const matHoneycomb = resolveMatId("mat-08", ["honeycomb"]);
+    if (matHoneycomb) {
+      const honeycombMov = await recordStockMovement({
+        material_id: matHoneycomb,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -honeycombMeters,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${honeycombMeters} m (${160 * qty} cm) Kertas Honeycomb`,
+      });
+      generatedMovements.push(honeycombMov);
+    }
 
     // 9. Skun Jarum Pipih (2 pcs per unit pesanan real)
     const skunQty = 2 * qty;
-    const skunMov = await recordStockMovement({
-      material_id: "mat-09",
-      movement_type: "PRODUCTION_USAGE",
-      quantity: -skunQty,
-      reference_id: order.id,
-      notes: `Produksi ${order.order_number}: Pemakaian ${skunQty} pcs Skun Jarum Pipih`,
-    });
-    generatedMovements.push(skunMov);
+    const matSkun = resolveMatId("mat-09", ["skun"]);
+    if (matSkun) {
+      const skunMov = await recordStockMovement({
+        material_id: matSkun,
+        movement_type: "PRODUCTION_USAGE",
+        quantity: -skunQty,
+        reference_id: order.id,
+        notes: `Produksi ${order.order_number}: Pemakaian ${skunQty} pcs Skun Jarum Pipih`,
+      });
+      generatedMovements.push(skunMov);
+    }
   }
 
   return generatedMovements;
@@ -332,25 +469,67 @@ export async function createMaterial(payload: {
   }
 
   const nowIso = new Date().toISOString();
+  const materialId = crypto.randomUUID();
+  const initialStock = Math.max(0, payload.current_stock || 0);
+  const minAlert = Math.max(0, payload.min_stock_alert || 0);
+  const supplier = payload.supplier?.trim() || null;
+
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured) {
+    const supabase = await getServiceSupabaseClient();
+    const { data, error } = await supabase
+      .from("materials")
+      .insert({
+        id: materialId,
+        name: payload.name.trim(),
+        category: payload.category,
+        unit: payload.unit,
+        current_stock: initialStock,
+        min_stock_alert: minAlert,
+        cost_per_unit: payload.cost_per_unit,
+        supplier,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Gagal menambah bahan baku ke database: ${error.message}`);
+    }
+
+    if (initialStock > 0) {
+      const { error: movError } = await supabase.from("stock_movements").insert({
+        id: crypto.randomUUID(),
+        material_id: materialId,
+        movement_type: "PURCHASE",
+        quantity: initialStock,
+        notes: "Saldo awal persediaan bahan baku",
+      });
+      if (movError) {
+        throw new Error(`Bahan berhasil dibuat namun gagal mencatat saldo awal mutasi stok: ${movError.message}`);
+      }
+    }
+
+    return data as Material;
+  }
+
   const newMaterial: Material = {
-    id: `mat-${Date.now()}`,
+    id: materialId,
     name: payload.name.trim(),
     category: payload.category,
     unit: payload.unit,
-    current_stock: Math.max(0, payload.current_stock || 0),
-    min_stock_alert: Math.max(0, payload.min_stock_alert || 0),
+    current_stock: initialStock,
+    min_stock_alert: minAlert,
     cost_per_unit: payload.cost_per_unit,
-    supplier: payload.supplier?.trim() || null,
+    supplier,
     created_at: nowIso,
     updated_at: nowIso,
   };
 
   memoryMaterials.push(newMaterial);
 
-  // If initial stock > 0, log an initial stock movement
   if (newMaterial.current_stock > 0) {
     const movement: StockMovement = {
-      id: `mov-${Date.now()}`,
+      id: crypto.randomUUID(),
       material_id: newMaterial.id,
       movement_type: "PURCHASE",
       quantity: newMaterial.current_stock,
@@ -358,25 +537,6 @@ export async function createMaterial(payload: {
       created_at: nowIso,
     };
     memoryMovements.unshift(movement);
-  }
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("materials").insert({
-        id: newMaterial.id,
-        name: newMaterial.name,
-        category: newMaterial.category,
-        unit: newMaterial.unit,
-        current_stock: newMaterial.current_stock,
-        min_stock_alert: newMaterial.min_stock_alert,
-        cost_per_unit: newMaterial.cost_per_unit,
-        supplier: newMaterial.supplier,
-      });
-    } catch {
-      // Fallback
-    }
   }
 
   return newMaterial;
@@ -389,6 +549,22 @@ export async function updateMaterial(
   id: string,
   payload: Partial<Omit<Material, "id" | "created_at">>
 ): Promise<Material> {
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured && isValidUuid(id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { data, error } = await supabase
+      .from("materials")
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Gagal memperbarui bahan baku di database: ${error.message}`);
+    }
+    return data as Material;
+  }
+
   const index = memoryMaterials.findIndex((m) => m.id === id);
   if (index === -1) {
     throw new Error(`Bahan baku ID "${id}" tidak ditemukan.`);
@@ -402,17 +578,6 @@ export async function updateMaterial(
   };
 
   memoryMaterials[index] = updated;
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("materials").update(payload).eq("id", id);
-    } catch {
-      // Fallback
-    }
-  }
-
   return updated;
 }
 
@@ -420,23 +585,22 @@ export async function updateMaterial(
  * Delete a material
  */
 export async function deleteMaterial(id: string): Promise<boolean> {
+  const { isConfigured } = getEnvStatus();
+  if (isConfigured && isValidUuid(id)) {
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("materials").delete().eq("id", id);
+    if (error) {
+      throw new Error(`Gagal menghapus bahan baku di database: ${error.message}`);
+    }
+    return true;
+  }
+
   const index = memoryMaterials.findIndex((m) => m.id === id);
   if (index === -1) {
     throw new Error(`Bahan baku ID "${id}" tidak ditemukan.`);
   }
 
   memoryMaterials.splice(index, 1);
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("materials").delete().eq("id", id);
-    } catch {
-      // Fallback
-    }
-  }
-
   return true;
 }
 
@@ -550,20 +714,7 @@ export async function adjustMaterialStock(
   });
 
   material.current_stock = targetStock;
-  material.updated_at = new Date().toISOString();
-
-  const { isConfigured } = getEnvStatus();
-  if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase
-        .from("materials")
-        .update({ current_stock: targetStock, updated_at: material.updated_at })
-        .eq("id", material.id);
-    } catch {
-      // Fallback
-    }
-  }
+  material.updated_at = movement.created_at;
 
   return { material, movement, difference };
 }

@@ -4,7 +4,7 @@ import {
   GlobalPricingSetting,
   ProductionAssumptionsSetting,
 } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServiceSupabaseClient } from "@/lib/supabase/db";
 import { getEnvStatus } from "@/lib/env";
 import { getProducts, updateProduct } from "@/lib/services/products-service";
 import Decimal from "decimal.js";
@@ -43,7 +43,7 @@ export async function getBusinessSettings(): Promise<BusinessSettings> {
 
   if (isConfigured) {
     try {
-      const supabase = await createServerSupabaseClient();
+      const supabase = await getServiceSupabaseClient();
       const { data, error } = await supabase.from("business_settings").select("*");
 
       if (!error && data && data.length > 0) {
@@ -80,19 +80,25 @@ export async function updateMarketplaceFees(
 
   const { isConfigured } = getEnvStatus();
   if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("business_settings").upsert(
-        {
-          key: "marketplace_fees",
-          value: updated,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "key" }
-      );
-    } catch {
-      // Fallback
+    const current = await getBusinessSettings();
+    const merged: MarketplaceFeesSetting = {
+      ...current.marketplace_fees,
+      ...fees,
+    };
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("business_settings").upsert(
+      {
+        key: "marketplace_fees",
+        value: merged,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "key" }
+    );
+    if (error) {
+      throw new Error(`Gagal menyimpan pengaturan biaya marketplace: ${error.message}`);
     }
+    memorySettings.marketplace_fees = merged;
+    return merged;
   }
 
   return updated;
@@ -113,19 +119,25 @@ export async function updateGlobalPricing(
 
   const { isConfigured } = getEnvStatus();
   if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("business_settings").upsert(
-        {
-          key: "global_pricing",
-          value: updated,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "key" }
-      );
-    } catch {
-      // Fallback
+    const current = await getBusinessSettings();
+    const merged: GlobalPricingSetting = {
+      ...current.global_pricing,
+      ...pricing,
+    };
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("business_settings").upsert(
+      {
+        key: "global_pricing",
+        value: merged,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "key" }
+    );
+    if (error) {
+      throw new Error(`Gagal menyimpan pengaturan harga global: ${error.message}`);
     }
+    memorySettings.global_pricing = merged;
+    return merged;
   }
 
   return updated;
@@ -146,19 +158,25 @@ export async function updateProductionAssumptions(
 
   const { isConfigured } = getEnvStatus();
   if (isConfigured) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      await supabase.from("business_settings").upsert(
-        {
-          key: "production_assumptions",
-          value: updated,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "key" }
-      );
-    } catch {
-      // Fallback
+    const current = await getBusinessSettings();
+    const merged: ProductionAssumptionsSetting = {
+      ...current.production_assumptions,
+      ...assumptions,
+    };
+    const supabase = await getServiceSupabaseClient();
+    const { error } = await supabase.from("business_settings").upsert(
+      {
+        key: "production_assumptions",
+        value: merged,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "key" }
+    );
+    if (error) {
+      throw new Error(`Gagal menyimpan asumsi produksi: ${error.message}`);
     }
+    memorySettings.production_assumptions = merged;
+    return merged;
   }
 
   return updated;
