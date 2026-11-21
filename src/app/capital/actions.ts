@@ -1,7 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAsset, updateAsset, deleteAsset, createCapitalPurchase } from "@/lib/services/capital-service";
+import {
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  createCapitalPurchase,
+  updateCapitalPurchase,
+  deleteCapitalPurchase,
+} from "@/lib/services/capital-service";
 import { Asset } from "@/types/database";
 import { CapitalPurchaseItem } from "@/lib/data/initial-data";
 
@@ -98,6 +105,8 @@ export async function createCapitalPurchaseAction(formData: FormData): Promise<A
     const unitPrice = parseFloat(formData.get("unit_price")?.toString() || "0");
     const quantity = parseInt(formData.get("quantity")?.toString() || "1", 10);
     const serviceFee = parseFloat(formData.get("service_fee")?.toString() || "0");
+    const purchaseDate = formData.get("purchase_date")?.toString().trim() || new Date().toISOString().split("T")[0];
+    const storeLocation = formData.get("store_location")?.toString().trim() || undefined;
 
     if (!name || unitPrice <= 0 || quantity <= 0) {
       return { success: false, error: "Nama transaksi, harga satuan, dan kuantitas wajib diisi." };
@@ -109,11 +118,64 @@ export async function createCapitalPurchaseAction(formData: FormData): Promise<A
       unitPrice,
       quantity,
       serviceFee,
+      purchaseDate,
+      storeLocation,
     });
 
     revalidatePath("/capital");
     return { success: true, data: item, message: "Catatan belanja modal berhasil ditambahkan!" };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : "Gagal mencatat belanja modal." };
+  }
+}
+
+export async function updateCapitalPurchaseAction(
+  id: string,
+  formData: FormData
+): Promise<ActionResult<CapitalPurchaseItem>> {
+  try {
+    const name = formData.get("name")?.toString().trim();
+    const category = formData.get("category")?.toString() as CapitalPurchaseItem["category"];
+    const unitPrice = parseFloat(formData.get("unit_price")?.toString() || "0");
+    const quantity = parseInt(formData.get("quantity")?.toString() || "1", 10);
+    const serviceFee = parseFloat(formData.get("service_fee")?.toString() || "0");
+    const purchaseDate = formData.get("purchase_date")?.toString().trim() || undefined;
+    const storeLocation = formData.get("store_location")?.toString().trim() || "";
+
+    if (!name || unitPrice <= 0 || quantity <= 0) {
+      return { success: false, error: "Nama transaksi, harga satuan, dan kuantitas wajib diisi." };
+    }
+
+    const updated = await updateCapitalPurchase(id, {
+      name,
+      category: category || "ALAT",
+      unitPrice,
+      quantity,
+      serviceFee,
+      ...(purchaseDate ? { purchaseDate } : {}),
+      storeLocation: storeLocation || undefined,
+    });
+
+    if (!updated) {
+      return { success: false, error: "Transaksi belanja modal tidak ditemukan." };
+    }
+
+    revalidatePath("/capital");
+    return { success: true, data: updated, message: "Transaksi belanja modal berhasil diperbarui!" };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal memperbarui belanja modal." };
+  }
+}
+
+export async function deleteCapitalPurchaseAction(id: string): Promise<ActionResult<boolean>> {
+  try {
+    const success = await deleteCapitalPurchase(id);
+    if (!success) {
+      return { success: false, error: "Transaksi belanja modal tidak ditemukan." };
+    }
+    revalidatePath("/capital");
+    return { success: true, data: true, message: "Transaksi belanja modal berhasil dihapus!" };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal menghapus belanja modal." };
   }
 }

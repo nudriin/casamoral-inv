@@ -11,7 +11,14 @@ import { Printer, Wrench, Plus, Search, Edit2, Trash2, X, CheckCircle, AlertCirc
 import { Asset } from "@/types/database";
 import { CapitalPurchaseItem } from "@/lib/data/initial-data";
 import { CapitalBreakdown } from "@/lib/services/capital-service";
-import { createAssetAction, updateAssetAction, deleteAssetAction, createCapitalPurchaseAction } from "./actions";
+import {
+  createAssetAction,
+  updateAssetAction,
+  deleteAssetAction,
+  createCapitalPurchaseAction,
+  updateCapitalPurchaseAction,
+  deleteCapitalPurchaseAction,
+} from "./actions";
 
 interface CapitalClientProps {
   initialPurchases: CapitalPurchaseItem[];
@@ -35,6 +42,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<CapitalPurchaseItem | null>(null);
 
   // Status & feedback
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,30 +125,61 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
     }
   };
 
-  // Capital purchase submit handler
+  // Capital purchase submit handler (Create / Edit)
   const handlePurchaseSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setFeedback(null);
 
     const formData = new FormData(e.currentTarget);
-    const res = await createCapitalPurchaseAction(formData);
 
-    if (res.success) {
-      const nextPurchases = [res.data, ...purchases];
-      setPurchases(nextPurchases);
-      updateLocalSummary(nextPurchases);
-      setFeedback({ type: "success", message: "Transaksi belanja modal berhasil dicatat!" });
-      setIsPurchaseModalOpen(false);
+    if (editingPurchase) {
+      const res = await updateCapitalPurchaseAction(editingPurchase.id, formData);
+      if (res.success) {
+        const nextPurchases = purchases.map((p) => (p.id === editingPurchase.id ? res.data : p));
+        setPurchases(nextPurchases);
+        updateLocalSummary(nextPurchases);
+        setFeedback({ type: "success", message: "Transaksi belanja modal berhasil diperbarui!" });
+        setIsPurchaseModalOpen(false);
+        setEditingPurchase(null);
+      } else {
+        setFeedback({ type: "error", message: res.error });
+      }
     } else {
-      setFeedback({ type: "error", message: res.error });
+      const res = await createCapitalPurchaseAction(formData);
+      if (res.success) {
+        const nextPurchases = [res.data, ...purchases];
+        setPurchases(nextPurchases);
+        updateLocalSummary(nextPurchases);
+        setFeedback({ type: "success", message: "Transaksi belanja modal berhasil dicatat!" });
+        setIsPurchaseModalOpen(false);
+      } else {
+        setFeedback({ type: "error", message: res.error });
+      }
     }
     setIsSubmitting(false);
   };
 
+  // Delete capital purchase
+  const handleDeletePurchase = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus transaksi modal "${name}"?`)) return;
+    const res = await deleteCapitalPurchaseAction(id);
+    if (res.success) {
+      const nextPurchases = purchases.filter((p) => p.id !== id);
+      setPurchases(nextPurchases);
+      updateLocalSummary(nextPurchases);
+      setFeedback({ type: "success", message: `Transaksi "${name}" berhasil dihapus.` });
+    } else {
+      setFeedback({ type: "error", message: res.error });
+    }
+  };
+
   // Filter purchases
   const filteredPurchases = purchases.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchPurchase.toLowerCase());
+    const q = searchPurchase.toLowerCase();
+    const matchesSearch =
+      p.name.toLowerCase().includes(q) ||
+      (p.storeLocation && p.storeLocation.toLowerCase().includes(q));
     const matchesCategory = selectedCategory === "ALL" || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -374,7 +413,10 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
               size="sm"
               variant="outline"
               className="gap-1.5 text-xs"
-              onClick={() => setIsPurchaseModalOpen(true)}
+              onClick={() => {
+                setEditingPurchase(null);
+                setIsPurchaseModalOpen(true);
+              }}
             >
               <ShoppingBag className="h-3.5 w-3.5" /> Tambah Transaksi Modal
             </Button>
@@ -421,6 +463,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                   <th className="py-3 px-4 font-semibold text-center">Jumlah</th>
                   <th className="py-3 px-4 font-semibold text-right">Biaya Layanan</th>
                   <th className="py-3 px-4 font-semibold text-right">Total Transaksi</th>
+                  <th className="py-3 px-4 font-semibold text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
@@ -434,8 +477,11 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                     </td>
                     <td className="py-2.5 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                       <div>{item.name}</div>
-                      {item.account && (
-                        <span className="text-[10px] font-normal text-zinc-400">Akun: {item.account}</span>
+                      {(item.storeLocation || item.account) && (
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-normal text-zinc-400 mt-0.5">
+                          {item.storeLocation && <span>Toko: {item.storeLocation}</span>}
+                          {item.account && <span>Akun: {item.account}</span>}
+                        </div>
                       )}
                     </td>
                     <td className="py-2.5 px-4">
@@ -452,6 +498,31 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                     <td className="py-2.5 px-4 text-right text-zinc-500">{formatRupiah(item.serviceFee)}</td>
                     <td className="py-2.5 px-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
                       {formatRupiah(item.totalCost)}
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-zinc-500 hover:text-amber-600"
+                          title="Edit Transaksi Modal"
+                          onClick={() => {
+                            setEditingPurchase(item);
+                            setIsPurchaseModalOpen(true);
+                          }}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-zinc-500 hover:text-rose-600"
+                          title="Hapus Transaksi Modal"
+                          onClick={() => void handleDeletePurchase(item.id, item.name)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -626,16 +697,19 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
               <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-50">
-                Catat Transaksi Belanja Modal
+                {editingPurchase ? "Edit Transaksi Belanja Modal" : "Catat Transaksi Belanja Modal"}
               </h3>
               <button
-                onClick={() => setIsPurchaseModalOpen(false)}
+                onClick={() => {
+                  setIsPurchaseModalOpen(false);
+                  setEditingPurchase(null);
+                }}
                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handlePurchaseSubmit} className="p-4 space-y-4">
+            <form key={editingPurchase?.id || "new-purchase"} onSubmit={handlePurchaseSubmit} className="p-4 space-y-4">
               <div className="space-y-1">
                 <Label htmlFor="p_name" className="text-xs">
                   Nama Barang / Pembelian
@@ -643,10 +717,48 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                 <Input
                   id="p_name"
                   name="name"
+                  defaultValue={editingPurchase?.name || ""}
                   required
                   placeholder="Contoh: Filament eSUN PLA Basic Grey"
                   className="h-8 text-xs"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="p_date" className="text-xs">
+                    Tanggal Pembelian
+                  </Label>
+                  <Input
+                    id="p_date"
+                    name="purchase_date"
+                    type="date"
+                    defaultValue={editingPurchase?.purchaseDate || new Date().toISOString().split("T")[0]}
+                    required
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="p_store" className="text-xs">
+                    Toko / Lokasi Pembelian
+                  </Label>
+                  <Input
+                    id="p_store"
+                    name="store_location"
+                    list="store-location-options"
+                    defaultValue={editingPurchase?.storeLocation || ""}
+                    placeholder="Contoh: Shopee / Toko Offline"
+                    className="h-8 text-xs"
+                  />
+                  <datalist id="store-location-options">
+                    <option value="Shopee" />
+                    <option value="Tokopedia" />
+                    <option value="TikTok Shop" />
+                    <option value="Mr.DIY" />
+                    <option value="Gemilang" />
+                    <option value="Toko Offline" />
+                  </datalist>
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -656,6 +768,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                 <select
                   id="p_category"
                   name="category"
+                  defaultValue={editingPurchase?.category || "FILAMEN"}
                   className="w-full h-8 px-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                 >
                   <option value="FILAMEN">FILAMEN (Bahan Baku)</option>
@@ -677,6 +790,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                     name="unit_price"
                     type="number"
                     min="0"
+                    defaultValue={editingPurchase?.unitPrice ?? ""}
                     required
                     placeholder="125000"
                     className="h-8 text-xs"
@@ -691,7 +805,7 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                     name="quantity"
                     type="number"
                     min="1"
-                    defaultValue="1"
+                    defaultValue={editingPurchase?.quantity ?? 1}
                     required
                     className="h-8 text-xs"
                   />
@@ -707,10 +821,10 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                   name="service_fee"
                   type="number"
                   min="0"
-                  defaultValue="2000"
+                  defaultValue={editingPurchase?.serviceFee ?? 2000}
                   className="h-8 text-xs"
                 />
-                <span className="text-[10px] text-zinc-500">Standar Shopee Rp 2.000 per transaksi</span>
+                <span className="text-[10px] text-zinc-500">Standar Shopee Rp 2.000 per transaksi (isi 0 jika toko offline)</span>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
@@ -719,12 +833,15 @@ export function CapitalClient({ initialPurchases, initialAssets, initialSummary 
                   variant="outline"
                   size="sm"
                   className="text-xs"
-                  onClick={() => setIsPurchaseModalOpen(false)}
+                  onClick={() => {
+                    setIsPurchaseModalOpen(false);
+                    setEditingPurchase(null);
+                  }}
                 >
                   Batal
                 </Button>
                 <Button type="submit" variant="accent" size="sm" className="text-xs" disabled={isSubmitting}>
-                  {isSubmitting ? "Menyimpan..." : "Simpan Transaksi"}
+                  {isSubmitting ? "Menyimpan..." : editingPurchase ? "Simpan Perubahan" : "Simpan Transaksi"}
                 </Button>
               </div>
             </form>

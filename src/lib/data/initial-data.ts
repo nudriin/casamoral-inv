@@ -20,6 +20,7 @@ export interface CapitalPurchaseItem {
   category: CapitalCategory;
   purchaseDate?: string;
   account?: string;
+  storeLocation?: string;
 }
 
 // 19 Items Modal Awal & Setup (23/09/2026 - 14/10/2026 dari data/moral_lab_expenses.csv, Total = Rp 11.546.443)

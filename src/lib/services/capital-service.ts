@@ -40,9 +40,43 @@ export async function createCapitalPurchase(purchase: Omit<CapitalPurchaseItem, 
     serviceFee: purchase.serviceFee,
     totalCost,
     category: purchase.category,
+    purchaseDate: purchase.purchaseDate || new Date().toISOString().split("T")[0],
+    account: purchase.account,
+    storeLocation: purchase.storeLocation,
   };
   inMemoryPurchases.unshift(newPurchase);
   return newPurchase;
+}
+
+export async function updateCapitalPurchase(
+  id: string,
+  updates: Partial<Omit<CapitalPurchaseItem, "id">>
+): Promise<CapitalPurchaseItem | null> {
+  const index = inMemoryPurchases.findIndex((p) => p.id === id);
+  if (index === -1) return null;
+
+  const current = inMemoryPurchases[index];
+  const unitPrice = updates.unitPrice ?? current.unitPrice;
+  const quantity = updates.quantity ?? current.quantity;
+  const serviceFee = updates.serviceFee ?? current.serviceFee;
+  const totalCost = updates.totalCost ?? (unitPrice * quantity + serviceFee);
+
+  const updated: CapitalPurchaseItem = {
+    ...current,
+    ...updates,
+    unitPrice,
+    quantity,
+    serviceFee,
+    totalCost,
+  };
+  inMemoryPurchases[index] = updated;
+  return updated;
+}
+
+export async function deleteCapitalPurchase(id: string): Promise<boolean> {
+  const initialLen = inMemoryPurchases.length;
+  inMemoryPurchases = inMemoryPurchases.filter((p) => p.id !== id);
+  return inMemoryPurchases.length < initialLen;
 }
 
 export async function getAssets(): Promise<Asset[]> {
