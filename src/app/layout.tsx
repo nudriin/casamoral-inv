@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PwaInstaller } from "@/components/pwa-installer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Casa Moral — 3D Printing Business Management System",
   description: "Sistem manajemen operasional, kalkulasi HPP presisi, pesanan, dan keuangan usaha 3D printing Casa Moral",
+  applicationName: "Casa Moral",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Casa Moral",
+  },
+  icons: {
+    icon: "/icon-192x192.png",
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#d97706",
 };
 
 export default function RootLayout({
@@ -52,6 +67,7 @@ export default function RootLayout({
           <DashboardShell>
             {children}
           </DashboardShell>
+          <PwaInstaller />
         </ThemeProvider>
       </body>
     </html>
