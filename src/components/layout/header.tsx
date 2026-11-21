@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   Plus,
@@ -11,6 +11,7 @@ import {
   Moon,
   Laptop,
   Check,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
@@ -86,8 +87,18 @@ const ROUTE_TITLES: Record<string, { title: string; subtitle: string }> = {
 
 export function Header({ onMenuClick, title: propTitle, subtitle: propSubtitle }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
+
+  const handleLock = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   // Determine title from prop or route mapping
   let currentTitle = propTitle;
@@ -218,6 +229,19 @@ export function Header({ onMenuClick, title: propTitle, subtitle: propSubtitle }
             </>
           )}
         </div>
+
+        {/* Lock / Logout */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void handleLock()}
+          title="Kunci Aplikasi (Logout)"
+          className="gap-1.5 text-xs text-zinc-600 dark:text-zinc-300 cursor-pointer"
+        >
+          <Lock className="h-3.5 w-3.5" />
+          <span className="hidden md:inline">Kunci</span>
+        </Button>
 
         {/* Quick Action: New Order */}
         <Link href="/orders/new">
