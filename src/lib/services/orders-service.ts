@@ -139,7 +139,24 @@ export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
 
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        const dbOrders = (data as Order[]).map((o) => populateOrderProducts(o));
+        const legacySeedNumbers = new Set([
+          "ORD-2026-001", "ORD-2026-002", "ORD-2026-003",
+          "ORD-2026-004", "ORD-2026-005", "ORD-2026-006",
+          "ORD-2026-007", "ORD-2026-008", "ORD-2026-009",
+        ]);
+        let dbOrders = (data as Order[])
+          .filter((o) => !legacySeedNumbers.has(o.order_number))
+          .map((o) => populateOrderProducts(o));
+        if (filters?.search) {
+          const q = filters.search.toLowerCase();
+          dbOrders = dbOrders.filter(
+            (o) =>
+              o.order_number.toLowerCase().includes(q) ||
+              o.customer?.name.toLowerCase().includes(q) ||
+              o.notes?.toLowerCase().includes(q) ||
+              o.items?.some((i) => i.color_details?.toLowerCase().includes(q) || i.add_on_name?.toLowerCase().includes(q))
+          );
+        }
         const dbNumbers = new Set(dbOrders.map((o) => o.order_number));
         let remainingInitial = memoryOrders.filter((o) => !dbNumbers.has(o.order_number));
         if (filters?.channel && filters.channel !== "ALL") {
@@ -157,7 +174,8 @@ export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
             (o) =>
               o.order_number.toLowerCase().includes(q) ||
               o.customer?.name.toLowerCase().includes(q) ||
-              o.notes?.toLowerCase().includes(q)
+              o.notes?.toLowerCase().includes(q) ||
+              o.items?.some((i) => i.color_details?.toLowerCase().includes(q) || i.add_on_name?.toLowerCase().includes(q))
           );
         }
         return [...dbOrders, ...remainingInitial.map((o) => populateOrderProducts(o))].sort(
@@ -842,6 +860,7 @@ export interface PosCheckoutPayload {
   channel: ChannelSource;
   items: PosItemInput[];
   packaging_items: import("./materials-service").SelectedPackagingItem[];
+  checkout_deductions?: import("./materials-service").CheckoutDeductionItem[];
   shipping_cost?: number;
   discount_amount?: number;
   payment_method: import("@/types/database").PaymentMethod;
@@ -1074,9 +1093,14 @@ export async function checkoutPosOrder(payload: PosCheckoutPayload): Promise<{
     await deductPackagingStockForOrder(orderId, orderNumber, payload.packaging_items);
   }
 
-  // 2. Deduct product BOM raw materials
-  const { deductBOMStockForOrder } = await import("./materials-service");
-  await deductBOMStockForOrder(newOrder);
+  // 2. Deduct product raw materials (custom selected from /inventory or fallback BOM)
+  if (payload.checkout_deductions && payload.checkout_deductions.length > 0) {
+    const { deductCustomCheckoutStock } = await import("./materials-service");
+    await deductCustomCheckoutStock(orderId, orderNumber, payload.checkout_deductions);
+  } else {
+    const { deductBOMStockForOrder } = await import("./materials-service");
+    await deductBOMStockForOrder(newOrder);
+  }
 
   // 3. Record payment transaction if paidAmount > 0
   if (paidAmount > 0) {

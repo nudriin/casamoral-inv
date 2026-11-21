@@ -33,10 +33,12 @@ import {
   Search,
 } from "lucide-react";
 import Decimal from "decimal.js";
+import type { CheckoutDeductionItem } from "@/lib/services/materials-service";
 
 interface PosClientProps {
   products: ProductWithBOM[];
   packagingMaterials: Material[];
+  allMaterials?: Material[];
 }
 
 interface CartProductItem {
@@ -59,7 +61,18 @@ interface CartPackagingItem {
   currentStock: number;
 }
 
-export function PosClient({ products, packagingMaterials }: PosClientProps) {
+export function PosClient({ products, packagingMaterials, allMaterials = [] }: PosClientProps) {
+  const inventoryList = allMaterials.length > 0 ? allMaterials : packagingMaterials;
+
+  const pickDefaultMaterialId = (keywords: string[], fallbackId: string, category?: Material["category"]) => {
+    const matches = inventoryList.filter(
+      (m) =>
+        (category && m.category === category) ||
+        keywords.some((kw) => m.name.toLowerCase().includes(kw))
+    );
+    const inStock = matches.find((m) => m.current_stock > 0);
+    return (inStock || matches[0])?.id || fallbackId;
+  };
   // Channel selection: Direct vs Shopee
   const [channel, setChannel] = useState<ChannelSource>("Direct");
 
@@ -103,6 +116,32 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
   // Search & view filters
   const [productSearch, setProductSearch] = useState("");
   const [activeCatalogTab, setActiveCatalogTab] = useState<"PRODUCTS" | "PACKAGING">("PRODUCTS");
+
+  // Synced /inventory raw material & component selections for POS checkout
+  const [deductFilament, setDeductFilament] = useState(true);
+  const [selectedFilamentId, setSelectedFilamentId] = useState(() =>
+    pickDefaultMaterialId(["filamen", "pla", "petg"], "mat-01", "filament")
+  );
+  const [deductBulb, setDeductBulb] = useState(true);
+  const [selectedBulbId, setSelectedBulbId] = useState(() =>
+    pickDefaultMaterialId(["lampu", "led", "bohlam", "inlite", "meval"], "mat-02")
+  );
+  const [deductCable, setDeductCable] = useState(true);
+  const [selectedCableId, setSelectedCableId] = useState(() =>
+    pickDefaultMaterialId(["kabel sakelar", "sakelar"], "mat-04")
+  );
+  const [deductFitting, setDeductFitting] = useState(true);
+  const [selectedFittingId, setSelectedFittingId] = useState(() =>
+    pickDefaultMaterialId(["fitting"], "mat-03")
+  );
+  const [deductProtector, setDeductProtector] = useState(true);
+  const [selectedProtectorId, setSelectedProtectorId] = useState(() =>
+    pickDefaultMaterialId(["pelindung"], "mat-05")
+  );
+  const [deductSkun, setDeductSkun] = useState(true);
+  const [selectedSkunId, setSelectedSkunId] = useState(() =>
+    pickDefaultMaterialId(["skun"], "mat-09")
+  );
 
   // Payment inputs
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
@@ -288,6 +327,35 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
     try {
       const paid = paidAmountInput !== "" ? Number(paidAmountInput) : financials.totalAmount;
 
+      const totalUnits = cartProducts.reduce((sum, p) => sum + (p.quantity || 1), 0);
+      const totalFilamentGrams = cartProducts.reduce((sum, item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        const gramsPerUnit = prod?.bom?.totalFilamentGram || 0;
+        return sum + gramsPerUnit * (item.quantity || 1);
+      }, 0);
+
+      const posDeductions: CheckoutDeductionItem[] = [];
+      const pushMat = (enabled: boolean, id: string, qty: number, fallbackName: string) => {
+        if (!enabled || qty <= 0) return;
+        const mat = inventoryList.find((m) => m.id === id);
+        if (!mat && inventoryList.length === 0) return;
+        posDeductions.push({
+          material_id: mat?.id || id,
+          name: mat?.name || fallbackName,
+          quantity: qty,
+          unit: mat?.unit || "pcs",
+        });
+      };
+
+      if (inventoryList.length > 0 && totalUnits > 0) {
+        pushMat(deductFilament, selectedFilamentId, Number(totalFilamentGrams.toFixed(2)), "Filamen PLA/PETG");
+        pushMat(deductBulb, selectedBulbId, totalUnits, "Lampu LED Bulb 3W");
+        pushMat(deductCable, selectedCableId, totalUnits, "Kabel Sakelar On/Off");
+        pushMat(deductFitting, selectedFittingId, totalUnits, "Fitting Lampu E27");
+        pushMat(deductProtector, selectedProtectorId, totalUnits, "Karet Pelindung Kabel");
+        pushMat(deductSkun, selectedSkunId, totalUnits * 2, "Skun Jarum Pipih");
+      }
+
       const res = await checkoutPosAction({
         customer_name: customerName.trim() || undefined,
         customer_city: customerCity.trim() || undefined,
@@ -307,6 +375,7 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
           unit_cost: pkg.unitCost,
           unit_price: pkg.unitPrice,
         })),
+        checkout_deductions: posDeductions.length > 0 ? posDeductions : undefined,
         discount_amount: financials.discountAmount,
         shipping_cost: financials.shippingCost,
         payment_method: paymentMethod,
@@ -475,7 +544,7 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
                         : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                     }`}
                   >
-                    <Boxes className="h-3.5 w-3.5 text-blue-600" /> 2. Pilihan Kemasan ({packagingMaterials.length})
+                    <Boxes className="h-3.5 w-3.5 text-blue-600" /> 2. Bahan &amp; Kemasan ({inventoryList.length})
                   </button>
                 </div>
 
@@ -549,7 +618,71 @@ export function PosClient({ products, packagingMaterials }: PosClientProps) {
 
               {/* TAB B: BAHAN KEMASAN DINAMIS */}
               {activeCatalogTab === "PACKAGING" && (
-                <div className="space-y-3">
+                <div className="space-y-4">
+                  {/* Synced Raw Material & Component Selector from /inventory */}
+                  {inventoryList.length > 0 && (
+                    <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/15 space-y-2.5">
+                      <div>
+                        <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                          Bahan Baku &amp; Komponen Terpotong (Sinkron /inventory)
+                        </p>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                          Pilih varian bahan &amp; komponen yang tersedia di /inventory untuk dipotong otomatis saat checkout POS.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {[
+                          { label: "Filamen 3D Print", checked: deductFilament, setChecked: setDeductFilament, id: selectedFilamentId, setId: setSelectedFilamentId, kw: ["filamen", "pla", "petg"], cat: "filament" as const },
+                          { label: "Lampu LED Bulb 3W", checked: deductBulb, setChecked: setDeductBulb, id: selectedBulbId, setId: setSelectedBulbId, kw: ["lampu", "led", "bohlam", "inlite", "meval"], cat: "electrical" as const },
+                          { label: "Kabel Sakelar On/Off", checked: deductCable, setChecked: setDeductCable, id: selectedCableId, setId: setSelectedCableId, kw: ["kabel sakelar", "sakelar"], cat: "electrical" as const },
+                          { label: "Fitting Lampu E27", checked: deductFitting, setChecked: setDeductFitting, id: selectedFittingId, setId: setSelectedFittingId, kw: ["fitting"], cat: "electrical" as const },
+                          { label: "Karet Pelindung Kabel", checked: deductProtector, setChecked: setDeductProtector, id: selectedProtectorId, setId: setSelectedProtectorId, kw: ["pelindung"], cat: "electrical" as const },
+                          { label: "Skun Jarum Pipih", checked: deductSkun, setChecked: setDeductSkun, id: selectedSkunId, setId: setSelectedSkunId, kw: ["skun"], cat: "electrical" as const },
+                        ].map((slot) => {
+                          const matched = inventoryList.filter(
+                            (m) => m.category === slot.cat || slot.kw.some((k) => m.name.toLowerCase().includes(k))
+                          );
+                          const others = inventoryList.filter((m) => !matched.some((x) => x.id === m.id));
+                          const options = [...matched, ...others];
+                          const currentMat = inventoryList.find((m) => m.id === slot.id);
+                          return (
+                            <div key={slot.label} className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-1">
+                              <label className="flex items-center justify-between cursor-pointer">
+                                <span className="flex items-center gap-1.5 font-medium text-[11px] text-zinc-800 dark:text-zinc-200">
+                                  <input
+                                    type="checkbox"
+                                    checked={slot.checked}
+                                    onChange={(e) => slot.setChecked(e.target.checked)}
+                                    className="rounded border-zinc-300 text-amber-600 h-3.5 w-3.5"
+                                  />
+                                  {slot.label}
+                                </span>
+                                {currentMat && (
+                                  <span className={`text-[10px] font-mono ${currentMat.current_stock <= 0 ? "text-red-500 font-bold" : "text-emerald-600 dark:text-emerald-400"}`}>
+                                    Stok: {currentMat.current_stock} {currentMat.unit}
+                                  </span>
+                                )}
+                              </label>
+                              {slot.checked && (
+                                <select
+                                  value={slot.id}
+                                  onChange={(e) => slot.setId(e.target.value)}
+                                  className="w-full h-7 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-2 text-[11px]"
+                                >
+                                  {options.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.name} (Stok: {m.current_stock} {m.unit})
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-200">
                     <p className="font-semibold flex items-center gap-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-blue-600" />

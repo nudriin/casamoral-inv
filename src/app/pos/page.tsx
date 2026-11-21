@@ -1,7 +1,9 @@
 import React from "react";
 import { getProducts } from "@/lib/services/products-service";
-import { getPackagingMaterials } from "@/lib/services/materials-service";
+import { getMaterials, getPackagingMaterials } from "@/lib/services/materials-service";
 import { PosClient } from "./pos-client";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Kasir POS — Penjualan & Realtime Margin | Casa Moral 3D Printing",
@@ -9,15 +11,17 @@ export const metadata = {
 };
 
 export default async function PosPage() {
-  const [products, packagingMaterials] = await Promise.all([
+  const [products, packagingMaterials, allMaterials] = await Promise.all([
     getProducts(),
     getPackagingMaterials(),
+    getMaterials(),
   ]);
 
   return (
     <PosClient
       products={products}
       packagingMaterials={packagingMaterials}
+      allMaterials={allMaterials}
     />
   );
 }
